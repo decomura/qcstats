@@ -83,37 +83,42 @@ function preprocessRegion(
   box: BoundingBox,
   regionType: "text" | "number" | "fraction" | "percentage" = "number"
 ): HTMLCanvasElement {
-  const regionCanvas = document.createElement("canvas");
-  // All regions get 4x upscale for maximum clarity
+  // Step 1: Crop and upscale the region
   const scale = 4;
-  regionCanvas.width = box.width * scale;
-  regionCanvas.height = box.height * scale;
+  const PAD = 16; // padding pixels around the text (helps Tesseract)
+  const cropW = box.width * scale;
+  const cropH = box.height * scale;
+
+  const regionCanvas = document.createElement("canvas");
+  regionCanvas.width = cropW + PAD * 2;
+  regionCanvas.height = cropH + PAD * 2;
 
   const ctx = regionCanvas.getContext("2d")!;
+
+  // Fill with WHITE background (Tesseract prefers black text on white)
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, regionCanvas.width, regionCanvas.height);
 
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
 
-  // Draw the cropped region scaled up
+  // Draw the cropped region scaled up, centered with padding
   ctx.drawImage(
     canvas,
     box.x,
     box.y,
     box.width,
     box.height,
-    0,
-    0,
-    regionCanvas.width,
-    regionCanvas.height
+    PAD,
+    PAD,
+    cropW,
+    cropH
   );
 
+  // Step 2: Binarize using max(R,G,B) → INVERT to black text on white bg
   const imageData = ctx.getImageData(0, 0, regionCanvas.width, regionCanvas.height);
   const data = imageData.data;
 
-  // Unified approach: Use max(R,G,B) for ALL region types
-  // This preserves colored text (green items, orange stats, white numbers)
-  // much better than grayscale luminance which kills green/orange channels.
-  // Only the threshold differs per type.
   const threshold = regionType === "text" ? 90 : 70;
   const contrast = regionType === "text" ? 1.8 : 2.0;
 
@@ -128,8 +133,9 @@ function preprocessRegion(
     let enhanced = factor * (maxChannel - 128) + 128;
     enhanced = Math.max(0, Math.min(255, enhanced));
 
-    // Binarize: text above threshold → white, background → black
-    const binarized = enhanced > threshold ? 255 : 0;
+    // INVERTED binarization: text → BLACK (0), background → WHITE (255)
+    // Tesseract works best with dark text on light background
+    const binarized = enhanced > threshold ? 0 : 255;
 
     data[i] = binarized;
     data[i + 1] = binarized;
@@ -167,18 +173,24 @@ export function loadImageToCanvas(file: File): Promise<HTMLCanvasElement> {
   });
 }
 
+// =====================================================
+// SCREEN TYPE DETECTION
+// =====================================================
+
 /**
- * Detect if image is a valid QC ranking screenshot
+ * Detect screen type from aspect ratio
  */
-export function detectScreenType(
+function detectScreenType(
   canvas: HTMLCanvasElement
-): "ranking" | "unknown" {
-  const ratio = canvas.width / canvas.height;
-  // 16:9 = 1.777, 21:9 = 2.333
-  if (ratio < 1.5 || ratio > 2.5) {
-    return "unknown";
+): "ranking_16_9" | "unknown" {
+  const aspect = canvas.width / canvas.height;
+
+  // 16:9 = 1.7778
+  if (Math.abs(aspect - 16 / 9) < 0.05) {
+    return "ranking_16_9";
   }
-  return "ranking";
+
+  return "unknown";
 }
 
 // =====================================================
@@ -208,9 +220,10 @@ async function extractRegionText(
   const processedCanvas = preprocessRegion(canvas, scaledBox, region.type);
 
   // Configure Tesseract params for this region
+  // PSM 8 = single word (better for numbers/short text than PSM 7 single line)
   await worker.setParameters({
     tessedit_char_whitelist: region.whitelist || "",
-    tessedit_pageseg_mode: "7" as never, // PSM.SINGLE_LINE
+    tessedit_pageseg_mode: "8" as never, // PSM.SINGLE_WORD
   });
 
   const {
@@ -474,7 +487,7 @@ export async function testSingleRegion(
   const worker = await getWorker();
   await worker.setParameters({
     tessedit_char_whitelist: whitelist || "",
-    tessedit_pageseg_mode: "7" as never, // PSM.SINGLE_LINE
+    tessedit_pageseg_mode: "8" as never, // PSM.SINGLE_WORD
   });
   const { data: { text } } = await worker.recognize(processed);
 
