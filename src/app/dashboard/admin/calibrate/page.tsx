@@ -24,8 +24,20 @@ export default async function CalibratePage() {
   if (!user) redirect("/login");
 
   // Must be an admin
-  if (!user.email || !ADMIN_EMAILS.includes(user.email.toLowerCase())) {
-    redirect("/dashboard");
+  const userEmail = user.email?.toLowerCase() || "";
+  if (!ADMIN_EMAILS.includes(userEmail)) {
+    return (
+      <div style={{ padding: "3rem", color: "#ff6b6b", fontFamily: "monospace", textAlign: "center" }}>
+        <h1>🔒 Access Denied</h1>
+        <p>This page is restricted to admins only.</p>
+        <p style={{ color: "#888", marginTop: "1rem" }}>
+          Your email: <strong style={{ color: "#ff9500" }}>{userEmail || "unknown"}</strong>
+        </p>
+        <p style={{ color: "#555", fontSize: "0.8rem" }}>
+          Contact admin to get access.
+        </p>
+      </div>
+    );
   }
 
   return <CalibrateContent />;
