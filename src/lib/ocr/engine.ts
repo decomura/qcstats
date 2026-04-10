@@ -1,16 +1,16 @@
 /**
  * QCStats OCR Engine
  * 
- * Client-side OCR using Tesseract.js.
+ * Client-side OCR using Transformers.js (TrOCR model).
  * Processes QC ranking screenshots by:
  * 1. Loading image onto canvas
  * 2. Detecting aspect ratio
- * 3. Extracting regions with pre-processing
- * 4. Running Tesseract OCR on each region
+ * 3. Cropping regions (no binarization/preprocessing needed!)
+ * 4. Running TrOCR on each cropped region
  * 5. Parsing and validating results
  */
 
-import { createWorker, type Worker } from "tesseract.js";
+import { pipeline, type ImageToTextPipeline } from "@huggingface/transformers";
 import {
   ALL_REGIONS,
   WEAPON_NAMES,
@@ -69,85 +69,67 @@ export interface OCRProgress {
 }
 
 // =====================================================
-// IMAGE PRE-PROCESSING
+// TrOCR PIPELINE (replaces Tesseract.js)
+// =====================================================
+
+let ocrPipeline: ImageToTextPipeline | null = null;
+let pipelineLoading: Promise<ImageToTextPipeline> | null = null;
+
+/**
+ * Get or create the TrOCR pipeline (singleton with loading lock)
+ */
+async function getOCR(): Promise<ImageToTextPipeline> {
+  if (ocrPipeline) return ocrPipeline;
+
+  // Prevent multiple simultaneous loads
+  if (pipelineLoading) return pipelineLoading;
+
+  pipelineLoading = pipeline(
+    "image-to-text",
+    "Xenova/trocr-small-printed",
+    { device: "wasm" }
+  ) as Promise<ImageToTextPipeline>;
+
+  ocrPipeline = await pipelineLoading;
+  pipelineLoading = null;
+  return ocrPipeline;
+}
+
+// =====================================================
+// REGION CROPPING (no preprocessing needed!)
 // =====================================================
 
 /**
- * Pre-process an image region for better OCR accuracy
- * - Convert to grayscale
- * - Increase contrast
- * - Apply threshold binarization
+ * Crop a region from the canvas — NO binarization, NO contrast adjustment.
+ * TrOCR handles raw image data natively.
+ * We only upscale slightly for better model accuracy.
  */
-function preprocessRegion(
+function cropRegion(
   canvas: HTMLCanvasElement,
-  box: BoundingBox,
-  regionType: "text" | "number" | "fraction" | "percentage" = "number"
+  box: BoundingBox
 ): HTMLCanvasElement {
-  // Step 1: Crop and upscale the region
-  // 3x scale (not 4x) — prevents characters from becoming too thick/bold
-  const scale = 3;
-  const PAD = 12; // padding pixels around the text (helps Tesseract)
-  const cropW = box.width * scale;
-  const cropH = box.height * scale;
+  const scale = 2; // mild upscale for clarity
+  const cropCanvas = document.createElement("canvas");
+  cropCanvas.width = box.width * scale;
+  cropCanvas.height = box.height * scale;
 
-  const regionCanvas = document.createElement("canvas");
-  regionCanvas.width = cropW + PAD * 2;
-  regionCanvas.height = cropH + PAD * 2;
-
-  const ctx = regionCanvas.getContext("2d")!;
-
-  // Fill with WHITE background (Tesseract prefers black text on white)
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, 0, regionCanvas.width, regionCanvas.height);
-
+  const ctx = cropCanvas.getContext("2d")!;
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
 
-  // Draw the cropped region scaled up, centered with padding
   ctx.drawImage(
     canvas,
     box.x,
     box.y,
     box.width,
     box.height,
-    PAD,
-    PAD,
-    cropW,
-    cropH
+    0,
+    0,
+    cropCanvas.width,
+    cropCanvas.height
   );
 
-  // Step 2: Binarize using max(R,G,B) → INVERT to black text on white bg
-  const imageData = ctx.getImageData(0, 0, regionCanvas.width, regionCanvas.height);
-  const data = imageData.data;
-
-  // Very gentle contrast (0.5) to avoid thickening characters
-  // Higher threshold = more selective = thinner characters
-  const threshold = regionType === "text" ? 115 : 125;
-  const contrast = 0.5;
-
-  // Pre-compute contrast factor (formula from Photoshop-style contrast)
-  const factor = (259 * (contrast * 128 + 255)) / (255 * (259 - contrast * 128));
-
-  for (let i = 0; i < data.length; i += 4) {
-    const r = data[i], g = data[i + 1], b = data[i + 2];
-
-    // Max channel: preserves ANY brightly-colored text on dark background
-    const maxChannel = Math.max(r, g, b);
-
-    // Gentle contrast enhancement
-    let enhanced = factor * (maxChannel - 128) + 128;
-    enhanced = Math.max(0, Math.min(255, enhanced));
-
-    // INVERTED binarization: text → BLACK (0), background → WHITE (255)
-    const binarized = enhanced > threshold ? 0 : 255;
-
-    data[i] = binarized;
-    data[i + 1] = binarized;
-    data[i + 2] = binarized;
-  }
-
-  ctx.putImageData(imageData, 0, 0);
-  return regionCanvas;
+  return cropCanvas;
 }
 
 /**
@@ -201,41 +183,24 @@ function detectScreenType(
 // OCR ENGINE
 // =====================================================
 
-let workerInstance: Worker | null = null;
-
-async function getWorker(): Promise<Worker> {
-  if (!workerInstance) {
-    workerInstance = await createWorker("eng", 1, {
-      // Use CDN for worker files
-    });
-  }
-  return workerInstance;
-}
-
 /**
- * Extract text from a single region
+ * Extract text from a single region using TrOCR
  */
 async function extractRegionText(
-  worker: Worker,
+  ocr: ImageToTextPipeline,
   canvas: HTMLCanvasElement,
   region: OCRRegion
 ): Promise<string> {
   const scaledBox = scaleBox(region.box, canvas.width, canvas.height);
-  const processedCanvas = preprocessRegion(canvas, scaledBox, region.type);
+  const cropped = cropRegion(canvas, scaledBox);
 
-  // PSM 7 = single text line (preserves case for nicks)
-  // PSM 8 = single word (better for numbers/short text)
-  const psmMode = region.type === "text" ? "7" : "8";
-  await worker.setParameters({
-    tessedit_char_whitelist: region.whitelist || "",
-    tessedit_pageseg_mode: psmMode as never,
-  });
+  // Convert crop to data URL for TrOCR
+  const dataUrl = cropped.toDataURL("image/png");
 
-  const {
-    data: { text },
-  } = await worker.recognize(processedCanvas);
+  const results = await ocr(dataUrl);
+  const raw = (results as Array<{ generated_text: string }>)[0]?.generated_text || "";
 
-  return text.trim();
+  return raw.trim();
 }
 
 /**
@@ -274,10 +239,10 @@ export async function processScreenshot(
     onProgress?.({ stage, progress, message });
   };
 
-  report("loading", 0, "Initializing OCR engine...");
-  const worker = await getWorker();
+  report("loading", 0, "Ładowanie modelu TrOCR (pierwsze użycie ~60MB)...");
+  const ocr = await getOCR();
 
-  report("preprocessing", 5, "Detecting screen layout...");
+  report("preprocessing", 5, "Wykrywanie layoutu...");
   const screenType = detectScreenType(canvas);
   if (screenType === "unknown") {
     throw new Error(
@@ -300,7 +265,7 @@ export async function processScreenshot(
           ...r,
           box: profile[r.name] || r.box,
         }));
-        report("preprocessing", 7, `Using calibration: ${variant} ✓`);
+        report("preprocessing", 7, `Kalibracja: ${variant} ✓`);
       }
     }
   } catch { /* fallback to defaults */ }
@@ -310,12 +275,12 @@ export async function processScreenshot(
   const totalRegions = activeRegions.length;
   const warnings: string[] = [];
 
-  report("ocr", 10, `Processing ${totalRegions} regions...`);
+  report("ocr", 10, `Przetwarzanie ${totalRegions} regionów...`);
 
   for (let i = 0; i < totalRegions; i++) {
     const region = activeRegions[i];
     try {
-      const text = await extractRegionText(worker, canvas, region);
+      const text = await extractRegionText(ocr, canvas, region);
       rawValues[region.name] = text;
     } catch {
       rawValues[region.name] = "";
@@ -323,11 +288,11 @@ export async function processScreenshot(
     }
 
     const progress = 10 + Math.round((i / totalRegions) * 80);
-    report("ocr", progress, `Processing: ${region.name} (${i + 1}/${totalRegions})`);
+    report("ocr", progress, `OCR: ${region.name} (${i + 1}/${totalRegions})`);
   }
 
   // Parse results
-  report("parsing", 90, "Parsing extracted data...");
+  report("parsing", 90, "Parsowanie danych...");
 
   const getVal = (name: string): string => rawValues[name] || "";
   const getNum = (name: string): number => parseInt(getVal(name).replace(/\D/g, ""), 10) || 0;
@@ -384,7 +349,7 @@ export async function processScreenshot(
   // Validation
   const confidence = calculateConfidence(player1, player2, warnings);
 
-  report("done", 100, "OCR complete!");
+  report("done", 100, "OCR zakończony!");
 
   return {
     player1,
@@ -453,24 +418,22 @@ function calculateConfidence(
 }
 
 /**
- * Clean up OCR worker
+ * Clean up OCR pipeline
  */
 export async function terminateOCR(): Promise<void> {
-  if (workerInstance) {
-    await workerInstance.terminate();
-    workerInstance = null;
-  }
+  ocrPipeline = null;
+  pipelineLoading = null;
 }
 
 /**
  * Test OCR on a single region – used by the calibrator for real-time feedback.
- * Returns the raw text and a data URL of the preprocessed image.
+ * Returns the raw text and a data URL of the cropped region preview.
  */
 export async function testSingleRegion(
   imageElement: HTMLImageElement,
   box: BoundingBox,
-  regionType: "text" | "number" | "fraction" | "percentage" = "number",
-  whitelist?: string
+  _regionType: "text" | "number" | "fraction" | "percentage" = "number",
+  _whitelist?: string
 ): Promise<{ text: string; previewUrl: string }> {
   // Draw image to canvas
   const canvas = document.createElement("canvas");
@@ -482,20 +445,17 @@ export async function testSingleRegion(
   // Scale box from reference to actual resolution
   const scaledBox = scaleBox(box, canvas.width, canvas.height);
 
-  // Preprocess
-  const processed = preprocessRegion(canvas, scaledBox, regionType);
+  // Crop region (no preprocessing needed for TrOCR!)
+  const cropped = cropRegion(canvas, scaledBox);
 
-  // Get preview data URL
-  const previewUrl = processed.toDataURL("image/png");
+  // Get preview data URL (shows exactly what TrOCR sees)
+  const previewUrl = cropped.toDataURL("image/png");
 
-  // Run OCR
-  const worker = await getWorker();
-  const psmMode = regionType === "text" ? "7" : "8";
-  await worker.setParameters({
-    tessedit_char_whitelist: whitelist || "",
-    tessedit_pageseg_mode: psmMode as never,
-  });
-  const { data: { text } } = await worker.recognize(processed);
+  // Run TrOCR
+  const ocr = await getOCR();
+  const dataUrl = cropped.toDataURL("image/png");
+  const results = await ocr(dataUrl);
+  const text = (results as Array<{ generated_text: string }>)[0]?.generated_text || "";
 
   return { text: text.trim(), previewUrl };
 }
