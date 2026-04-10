@@ -119,8 +119,8 @@ function preprocessRegion(
   const imageData = ctx.getImageData(0, 0, regionCanvas.width, regionCanvas.height);
   const data = imageData.data;
 
-  const threshold = regionType === "text" ? 90 : 70;
-  const contrast = regionType === "text" ? 1.8 : 2.0;
+  const threshold = regionType === "text" ? 120 : 130;
+  const contrast = regionType === "text" ? 1.5 : 1.6;
 
   for (let i = 0; i < data.length; i += 4) {
     const r = data[i], g = data[i + 1], b = data[i + 2];
@@ -219,11 +219,12 @@ async function extractRegionText(
   const scaledBox = scaleBox(region.box, canvas.width, canvas.height);
   const processedCanvas = preprocessRegion(canvas, scaledBox, region.type);
 
-  // Configure Tesseract params for this region
-  // PSM 8 = single word (better for numbers/short text than PSM 7 single line)
+  // PSM 7 = single text line (preserves case for nicks)
+  // PSM 8 = single word (better for numbers/short text)
+  const psmMode = region.type === "text" ? "7" : "8";
   await worker.setParameters({
     tessedit_char_whitelist: region.whitelist || "",
-    tessedit_pageseg_mode: "8" as never, // PSM.SINGLE_WORD
+    tessedit_pageseg_mode: psmMode as never,
   });
 
   const {
@@ -485,9 +486,10 @@ export async function testSingleRegion(
 
   // Run OCR
   const worker = await getWorker();
+  const psmMode = regionType === "text" ? "7" : "8";
   await worker.setParameters({
     tessedit_char_whitelist: whitelist || "",
-    tessedit_pageseg_mode: "8" as never, // PSM.SINGLE_WORD
+    tessedit_pageseg_mode: psmMode as never,
   });
   const { data: { text } } = await worker.recognize(processed);
 
