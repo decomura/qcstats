@@ -1,6 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import type { Metadata } from "next";
 import SettingsContent from "./SettingsContent";
+
+export const metadata: Metadata = {
+  title: "Settings | QCStats",
+  description: "Manage your QCStats profile and account settings.",
+};
 
 export default async function SettingsPage() {
   const supabase = await createClient();

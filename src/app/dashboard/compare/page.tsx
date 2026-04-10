@@ -1,6 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import type { Metadata } from "next";
 import CompareContent from "./CompareContent";
+
+export const metadata: Metadata = {
+  title: "Head-to-Head Compare | QCStats",
+  description: "Compare your stats against specific opponents in Quake Champions duels.",
+};
 
 export default async function ComparePage() {
   const supabase = await createClient();

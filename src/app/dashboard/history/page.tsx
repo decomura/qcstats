@@ -1,6 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import type { Metadata } from "next";
 import HistoryContent from "./HistoryContent";
+
+export const metadata: Metadata = {
+  title: "Match History | QCStats",
+  description: "Browse all your recorded Quake Champions duel matches.",
+};
 
 export default async function HistoryPage() {
   const supabase = await createClient();
