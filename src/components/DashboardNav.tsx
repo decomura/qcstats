@@ -66,18 +66,15 @@ export default function DashboardNav({ user }: Props) {
 
           {menuOpen && (
             <div className={styles.dropdown}>
-              <a href="/profile" className={styles.dropdownItem}>
-                Profile
-              </a>
-              <a href="/settings" className={styles.dropdownItem}>
-                Settings
+              <a href="/dashboard/settings" className={styles.dropdownItem}>
+                ⚙️ Settings
               </a>
               <button
                 onClick={handleLogout}
                 className={styles.dropdownItem}
                 type="button"
               >
-                Logout
+                🚪 Logout
               </button>
             </div>
           )}
