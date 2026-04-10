@@ -40,6 +40,9 @@ export default function DashboardNav({ user }: Props) {
           <a href="/dashboard" className={styles.link}>
             📊 Dashboard
           </a>
+          <a href="/dashboard/upload" className={styles.link}>
+            📸 Upload
+          </a>
           <a href="/dashboard/history" className={styles.link}>
             📋 History
           </a>

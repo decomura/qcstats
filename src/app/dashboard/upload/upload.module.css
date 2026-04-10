@@ -1,0 +1,476 @@
+.uploadPage {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.uploadPage h1 {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.uploadPage h1 span {
+  color: var(--accent-orange);
+}
+
+.subtitle {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  margin-bottom: 2rem;
+}
+
+/* ─── Drop Zone ─── */
+
+.dropZone {
+  position: relative;
+  border: 2px dashed var(--border-primary);
+  border-radius: 16px;
+  padding: 3rem 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: var(--bg-card);
+  backdrop-filter: blur(12px);
+  overflow: hidden;
+}
+
+.dropZone::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 107, 0, 0.03) 0%,
+    transparent 50%,
+    rgba(204, 0, 0, 0.03) 100%
+  );
+  pointer-events: none;
+}
+
+.dropZone:hover,
+.dropZoneDragging {
+  border-color: var(--accent-orange);
+  background: rgba(255, 107, 0, 0.05);
+  box-shadow: var(--glow-red);
+}
+
+.dropZoneIcon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  display: block;
+}
+
+.dropZoneTitle {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.dropZoneMethods {
+  display: flex;
+  gap: 1.5rem;
+  justify-content: center;
+  margin: 1rem 0;
+  flex-wrap: wrap;
+}
+
+.method {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-primary);
+}
+
+.method kbd {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-secondary);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--accent-orange);
+}
+
+.dropZoneHint {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  margin-top: 0.5rem;
+}
+
+.fileInput {
+  display: none;
+}
+
+/* ─── Preview Section ─── */
+
+.previewSection {
+  margin-top: 2rem;
+}
+
+.previewHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.previewHeader h2 {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  color: var(--text-primary);
+}
+
+.previewActions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.btnCancel {
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-primary);
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btnCancel:hover {
+  border-color: var(--accent-red);
+  color: var(--accent-red);
+}
+
+.btnSave {
+  padding: 0.6rem 1.5rem;
+  border-radius: 8px;
+  border: none;
+  background: linear-gradient(135deg, var(--accent-red), var(--accent-orange));
+  color: white;
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: all 0.2s;
+}
+
+.btnSave:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 20px rgba(255, 107, 0, 0.3);
+}
+
+.btnSave:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.imagePreview {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border-primary);
+  margin-bottom: 1.5rem;
+}
+
+.imagePreview img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* ─── Progress Bar ─── */
+
+.progressContainer {
+  margin: 2rem 0;
+}
+
+.progressBar {
+  height: 6px;
+  background: var(--bg-secondary);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 0.75rem;
+}
+
+.progressFill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-orange), var(--accent-red));
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.progressText {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-family: var(--font-mono);
+}
+
+/* ─── Results Panel ─── */
+
+.resultsPanel {
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: 16px;
+  padding: 1.5rem;
+  backdrop-filter: blur(12px);
+}
+
+.confidenceBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 1rem;
+  border-radius: 20px;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+}
+
+.confidenceHigh {
+  background: rgba(0, 204, 102, 0.1);
+  color: var(--accent-green);
+  border: 1px solid rgba(0, 204, 102, 0.2);
+}
+
+.confidenceMedium {
+  background: rgba(255, 170, 0, 0.1);
+  color: var(--accent-gold);
+  border: 1px solid rgba(255, 170, 0, 0.2);
+}
+
+.confidenceLow {
+  background: rgba(204, 0, 0, 0.1);
+  color: var(--accent-red);
+  border: 1px solid rgba(204, 0, 0, 0.2);
+}
+
+.warnings {
+  margin-bottom: 1.5rem;
+}
+
+.warning {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--accent-gold);
+  font-size: 0.85rem;
+  padding: 0.5rem;
+  background: rgba(255, 170, 0, 0.05);
+  border-radius: 6px;
+  margin-bottom: 0.25rem;
+}
+
+/* ─── Match Card (Preview of extracted data) ─── */
+
+.matchCard {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 1rem;
+  align-items: start;
+}
+
+.playerCard {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-primary);
+  border-radius: 12px;
+  padding: 1.25rem;
+}
+
+.playerHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-primary);
+}
+
+.playerNick {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  color: var(--text-primary);
+}
+
+.playerNickEditable {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-primary);
+  border-radius: 6px;
+  padding: 0.3rem 0.6rem;
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  color: var(--text-primary);
+  width: 100%;
+  max-width: 200px;
+}
+
+.playerNickEditable:focus {
+  border-color: var(--accent-orange);
+  outline: none;
+}
+
+.scoreDisplay {
+  text-align: center;
+  padding: 1rem;
+}
+
+.scoreVs {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.score {
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  font-weight: 700;
+}
+
+.scoreWinner {
+  color: var(--accent-green);
+}
+
+.scoreLoser {
+  color: var(--accent-red);
+}
+
+.scoreSeparator {
+  color: var(--text-muted);
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+}
+
+.statRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.statLabel {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.statValue {
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+
+.statValueEditable {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  text-align: right;
+  width: 80px;
+}
+
+.statValueEditable:focus {
+  border-color: var(--accent-orange);
+  outline: none;
+}
+
+.weaponsSection {
+  margin-top: 1rem;
+}
+
+.weaponsSection h4 {
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  color: var(--accent-orange);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 0.75rem;
+}
+
+.weaponRow {
+  display: grid;
+  grid-template-columns: 120px 70px 50px 50px 40px;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.3rem 0;
+  font-size: 0.8rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+}
+
+.weaponRow:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.weaponHeader {
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.weaponName {
+  color: var(--text-secondary);
+  font-family: var(--font-display);
+}
+
+.weaponStat {
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  text-align: right;
+}
+
+/* ─── Error State ─── */
+
+.errorBox {
+  background: rgba(204, 0, 0, 0.1);
+  border: 1px solid rgba(204, 0, 0, 0.3);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-top: 1.5rem;
+  text-align: center;
+}
+
+.errorBox h3 {
+  color: var(--accent-red);
+  font-family: var(--font-display);
+  margin-bottom: 0.5rem;
+}
+
+.errorBox p {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.btnRetry {
+  margin-top: 1rem;
+  padding: 0.5rem 1.5rem;
+  border-radius: 8px;
+  border: 1px solid var(--accent-orange);
+  background: transparent;
+  color: var(--accent-orange);
+  font-family: var(--font-display);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btnRetry:hover {
+  background: rgba(255, 107, 0, 0.1);
+}
