@@ -38,12 +38,12 @@ export default function LandingPage() {
           </p>
 
           <div className={styles.heroActions}>
-            <button className="btn btn-primary btn-lg" id="cta-get-started">
+            <a href="/login" className="btn btn-primary btn-lg" id="cta-get-started">
               ⚡ Get Started
-            </button>
-            <button className="btn btn-secondary btn-lg" id="cta-how-works">
+            </a>
+            <a href="#how-it-works" className="btn btn-secondary btn-lg" id="cta-how-works">
               How It Works
-            </button>
+            </a>
           </div>
 
           <div className={styles.statsStrip}>
@@ -132,7 +132,7 @@ export default function LandingPage() {
       </section>
 
       {/* ═══════════ HOW IT WORKS ═══════════ */}
-      <section className={styles.howItWorks}>
+      <section className={styles.howItWorks} id="how-it-works">
         <div className={styles.featuresHeader}>
           <div className={styles.sectionLabel}>// Process</div>
           <h2 className={styles.sectionTitle}>How It Works</h2>
