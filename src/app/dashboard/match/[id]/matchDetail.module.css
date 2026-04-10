@@ -1,0 +1,315 @@
+.page {
+  padding: 1.5rem 2rem;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+}
+
+.breadcrumb a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.breadcrumb a:hover {
+  color: var(--accent-orange);
+}
+
+.breadcrumb span {
+  color: var(--text-muted);
+}
+
+.current {
+  color: var(--text-primary) !important;
+}
+
+/* ─── Score Header ─── */
+
+.scoreHeader {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 2rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: 16px;
+  padding: 2rem;
+  margin-bottom: 1.5rem;
+  backdrop-filter: blur(12px);
+}
+
+.playerSide {
+  text-align: center;
+}
+
+.playerName {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: 700;
+}
+
+.winner {
+  color: var(--accent-green);
+}
+
+.loser {
+  color: var(--text-secondary);
+}
+
+.champion {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--accent-gold);
+  margin-top: 0.25rem;
+}
+
+.scoreCenter {
+  text-align: center;
+}
+
+.scores {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-family: var(--font-display);
+  font-size: 3rem;
+  font-weight: 700;
+}
+
+.scoreWin {
+  color: var(--accent-green);
+}
+
+.scoreLose {
+  color: var(--accent-red);
+}
+
+.scoreSep {
+  color: var(--text-muted);
+  font-size: 2rem;
+}
+
+.matchMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-top: 0.5rem;
+}
+
+.mapName {
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  color: var(--accent-orange);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.matchDate {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+/* ─── Screenshot ─── */
+
+.screenshotSection {
+  margin-bottom: 1.5rem;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border-primary);
+}
+
+.screenshot {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* ─── Stats Comparison ─── */
+
+.statsComparison {
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: 16px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  backdrop-filter: blur(12px);
+}
+
+.statsComparison h3 {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  color: var(--text-primary);
+  margin-bottom: 1rem;
+}
+
+.comparisonGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.compRow {
+  display: grid;
+  grid-template-columns: 100px 1fr 100px;
+  gap: 1rem;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.compValue {
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.compValue:first-child {
+  text-align: right;
+}
+
+.compValue:last-child {
+  text-align: left;
+}
+
+.compBetter {
+  color: var(--accent-green) !important;
+  font-weight: 600;
+}
+
+.compCenter {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.compLabel {
+  font-family: var(--font-heading);
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.compBar {
+  width: 100%;
+  height: 4px;
+  background: rgba(204, 0, 0, 0.3);
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+}
+
+.compBarFill {
+  height: 100%;
+  border-radius: 2px;
+}
+
+.compBarLeft {
+  background: linear-gradient(90deg, var(--accent-green), var(--accent-orange));
+}
+
+/* ─── Weapons Section ─── */
+
+.weaponsSection {
+  margin-bottom: 2rem;
+}
+
+.weaponsSection h3 {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  color: var(--text-primary);
+  margin-bottom: 1rem;
+}
+
+.weaponsGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.weaponTable {
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: 12px;
+  overflow: hidden;
+  backdrop-filter: blur(12px);
+}
+
+.weaponTableHeader {
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid var(--border-primary);
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  color: var(--accent-orange);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.wTable {
+  padding: 0 0.75rem;
+}
+
+.wRow {
+  display: grid;
+  grid-template-columns: 1fr 70px 50px 50px 35px;
+  gap: 0.25rem;
+  padding: 0.4rem 0.25rem;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+  font-size: 0.8rem;
+}
+
+.wRow:last-child {
+  border-bottom: none;
+}
+
+.wRow:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.wHeader {
+  font-family: var(--font-heading);
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--border-primary) !important;
+}
+
+.wName {
+  font-family: var(--font-display);
+  color: var(--text-secondary);
+}
+
+.wStat {
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  text-align: right;
+}
+
+@media (max-width: 768px) {
+  .scoreHeader {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .weaponsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .compRow {
+    grid-template-columns: 80px 1fr 80px;
+  }
+}

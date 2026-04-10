@@ -91,11 +91,45 @@ export default async function DashboardPage() {
     totalDamage: playerData.reduce((sum, m) => sum + (m.total_damage || 0), 0),
   };
 
+  // Build chart data: accuracy over time
+  // We need match dates - fetch from recentMatches (ordered by date)
+  const allMatchesForChart = recentMatches || [];
+  const accuracyChartData = allMatchesForChart.map((m) => {
+    const myPlayer = m.match_players.find(
+      (mp: { player_nick: string; side: number; score: number; is_winner: boolean; accuracy_pct: number; total_damage: number }) =>
+        // We uploaded this - find our player by profile link
+        mp.side === 1 || mp.side === 2
+    );
+    const date = new Date(m.match_date).toLocaleDateString("pl-PL", { day: "2-digit", month: "short" });
+    return {
+      date,
+      accuracy: myPlayer?.accuracy_pct || 0,
+      lgAccuracy: 0,
+      railAccuracy: 0,
+      damage: myPlayer?.total_damage || 0,
+    };
+  }).reverse();
+
+  // Build weapon distribution data
+  const weaponMap = new Map<string, { kills: number; damage: number }>();
+  for (const w of allWeapons) {
+    const existing = weaponMap.get(w.weapon_name) || { kills: 0, damage: 0 };
+    existing.kills += w.kills;
+    existing.damage += w.damage;
+    weaponMap.set(w.weapon_name, existing);
+  }
+  const weaponChartData = Array.from(weaponMap.entries())
+    .map(([weapon, data]) => ({ weapon, ...data }))
+    .filter((w) => w.kills > 0 || w.damage > 0)
+    .sort((a, b) => b.damage - a.damage);
+
   return (
     <DashboardContent
       stats={stats}
       recentMatches={recentMatches || []}
       userName={user.user_metadata?.preferred_username || user.email?.split("@")[0] || "Player"}
+      accuracyChartData={accuracyChartData}
+      weaponChartData={weaponChartData}
     />
   );
 }

@@ -1,7 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import styles from "./dashboard.module.css";
+
+const StatsCharts = dynamic(() => import("@/components/charts/StatsCharts"), {
+  ssr: false,
+  loading: () => <div style={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Loading charts...</div>,
+});
 
 interface MatchPlayer {
   player_nick: string;
@@ -34,16 +40,34 @@ interface Stats {
   totalDamage: number;
 }
 
+interface AccuracyDataPoint {
+  date: string;
+  accuracy: number;
+  lgAccuracy: number;
+  railAccuracy: number;
+  damage: number;
+}
+
+interface WeaponDistribution {
+  weapon: string;
+  kills: number;
+  damage: number;
+}
+
 interface Props {
   stats: Stats;
   recentMatches: RecentMatch[];
   userName: string;
+  accuracyChartData: AccuracyDataPoint[];
+  weaponChartData: WeaponDistribution[];
 }
 
 export default function DashboardContent({
   stats,
   recentMatches,
   userName,
+  accuracyChartData,
+  weaponChartData,
 }: Props) {
   const hasData = stats.totalMatches > 0;
 
@@ -164,7 +188,7 @@ export default function DashboardContent({
               );
 
               return (
-                <div key={match.id} className={styles.matchRow}>
+                <Link key={match.id} href={`/dashboard/match/${match.id}`} className={styles.matchRow} style={{ textDecoration: 'none', color: 'inherit' }}>
                   <div className={styles.matchDate}>{matchDate}</div>
                   <div className={styles.matchPlayers}>
                     <span
@@ -202,12 +226,20 @@ export default function DashboardContent({
                   <div className={styles.matchMap}>
                     {match.map_name || "Unknown Map"}
                   </div>
-                </div>
+                </Link>
               );
             })}
           </div>
         )}
       </div>
+
+      {/* ─── Charts ─── */}
+      {hasData && (
+        <StatsCharts
+          accuracyData={accuracyChartData}
+          weaponData={weaponChartData}
+        />
+      )}
     </div>
   );
 }

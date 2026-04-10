@@ -177,8 +177,8 @@ export async function saveMatch(
 
   // 5. Create match_players records
   const playersToInsert = [
-    buildMatchPlayer(ocrResult.player1, matchId, 1, p1Nick, p1Score, p1ProfileId),
-    buildMatchPlayer(ocrResult.player2, matchId, 2, p2Nick, p2Score, p2ProfileId),
+    buildMatchPlayer(ocrResult.player1, matchId, 1, p1Nick, p1Score, p1ProfileId, p2Score),
+    buildMatchPlayer(ocrResult.player2, matchId, 2, p2Nick, p2Score, p2ProfileId, p1Score),
   ];
 
   const { data: playersData, error: playersError } = await supabase
@@ -226,7 +226,8 @@ function buildMatchPlayer(
   side: 1 | 2,
   nick: string,
   score: number,
-  profileId: string | null
+  profileId: string | null,
+  opponentScore?: number
 ) {
   return {
     match_id: matchId,
@@ -244,7 +245,7 @@ function buildMatchPlayer(
     heavy_armor_pickups: player.heavyArmorPickups,
     light_armor_pickups: player.lightArmorPickups,
     champion: null,
-    is_winner: side === 1 ? score > (side === 1 ? 0 : score) : score > 0,
+    is_winner: opponentScore !== undefined ? score > opponentScore : player.isWinner,
   };
 }
 
