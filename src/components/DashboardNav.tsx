@@ -14,6 +14,7 @@ export default function DashboardNav({ user }: Props) {
   const router = useRouter();
   const supabase = createClient();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -79,7 +80,30 @@ export default function DashboardNav({ user }: Props) {
             </div>
           )}
         </div>
+        {/* Mobile Hamburger */}
+        <button
+          className={styles.hamburger}
+          onClick={() => setMobileOpen(!mobileOpen)}
+          type="button"
+          aria-label="Menu"
+        >
+          <span />
+          <span />
+          <span />
+        </button>
       </div>
+
+      {/* Mobile Drawer */}
+      {mobileOpen && (
+        <div className={styles.mobileDrawer}>
+          <a href="/dashboard" className={styles.mobileLink} onClick={() => setMobileOpen(false)}>📊 Dashboard</a>
+          <a href="/dashboard/upload" className={styles.mobileLink} onClick={() => setMobileOpen(false)}>📸 Upload</a>
+          <a href="/dashboard/history" className={styles.mobileLink} onClick={() => setMobileOpen(false)}>📋 History</a>
+          <a href="/dashboard/compare" className={styles.mobileLink} onClick={() => setMobileOpen(false)}>⚔️ Compare</a>
+          <a href="/dashboard/settings" className={styles.mobileLink} onClick={() => setMobileOpen(false)}>⚙️ Settings</a>
+          <button onClick={handleLogout} className={styles.mobileLink} type="button">🚪 Logout</button>
+        </div>
+      )}
     </nav>
   );
 }

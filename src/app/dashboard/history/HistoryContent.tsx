@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { generateCSV, downloadCSV } from "@/lib/utils/export";
 import styles from "./history.module.css";
 
 interface MatchPlayer {
@@ -40,9 +41,39 @@ export default function HistoryContent({ matches }: Props) {
         <h1>
           📋 <span className={styles.accent}>Match</span> History
         </h1>
-        <Link href="/dashboard/upload" className={styles.uploadBtn}>
-          📸 Upload New
-        </Link>
+        <div className={styles.headerActions}>
+          {matches.length > 0 && (
+            <button
+              className={styles.exportBtn}
+              onClick={() => {
+                const csv = generateCSV(
+                  matches.map((m) => {
+                    const p1 = m.match_players.find((mp) => mp.side === 1);
+                    const p2 = m.match_players.find((mp) => mp.side === 2);
+                    return {
+                      date: new Date(m.match_date).toLocaleDateString("pl-PL"),
+                      player1: p1?.player_nick || "?",
+                      player2: p2?.player_nick || "?",
+                      score: `${m.player1_score}-${m.player2_score}`,
+                      map: m.map_name || "Unknown",
+                      p1Accuracy: p1?.accuracy_pct || 0,
+                      p2Accuracy: p2?.accuracy_pct || 0,
+                      p1Damage: p1?.total_damage || 0,
+                      p2Damage: p2?.total_damage || 0,
+                      winner: m.player1_score > m.player2_score ? (p1?.player_nick || "?") : (p2?.player_nick || "?"),
+                    };
+                  })
+                );
+                downloadCSV(csv);
+              }}
+            >
+              📥 Export CSV
+            </button>
+          )}
+          <Link href="/dashboard/upload" className={styles.uploadBtn}>
+            📸 Upload New
+          </Link>
+        </div>
       </div>
 
       {matches.length === 0 ? (
