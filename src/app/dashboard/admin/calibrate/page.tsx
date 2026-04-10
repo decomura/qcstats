@@ -10,8 +10,7 @@ export const metadata: Metadata = {
 
 // Admin email whitelist – only these users can access the calibration panel
 const ADMIN_EMAILS = [
-  "dziadekarmadek@gmail.com",
-  // Add more admin emails here
+  "n3onasg@gmail.com",
 ];
 
 export default async function CalibratePage() {
