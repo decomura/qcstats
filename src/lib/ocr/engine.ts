@@ -284,15 +284,35 @@ export async function processScreenshot(
     );
   }
 
+  // Load calibration profile from localStorage (if available)
+  let activeRegions = ALL_REGIONS;
+  try {
+    const saved = typeof window !== "undefined"
+      ? localStorage.getItem("qcstats_ocr_calibration")
+      : null;
+    if (saved) {
+      const data = JSON.parse(saved);
+      // Try "total_score" variant first (most common)
+      const profile = data["total_score"] || data["ranking"];
+      if (profile) {
+        activeRegions = ALL_REGIONS.map((r) => ({
+          ...r,
+          box: profile[r.name] || r.box,
+        }));
+        report("preprocessing", 7, "Using saved calibration profile ✓");
+      }
+    }
+  } catch { /* fallback to defaults */ }
+
   // Process all regions
   const rawValues: Record<string, string> = {};
-  const totalRegions = ALL_REGIONS.length;
+  const totalRegions = activeRegions.length;
   const warnings: string[] = [];
 
   report("ocr", 10, `Processing ${totalRegions} regions...`);
 
   for (let i = 0; i < totalRegions; i++) {
-    const region = ALL_REGIONS[i];
+    const region = activeRegions[i];
     try {
       const text = await extractRegionText(worker, canvas, region);
       rawValues[region.name] = text;
