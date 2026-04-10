@@ -100,6 +100,11 @@ export async function fetchWallPosts(
   // Fetch comments and reactions for these matches
   const matchIds = matches.map((m) => m.id);
 
+  // Guard: skip sub-queries when there are no matches
+  if (matchIds.length === 0) {
+    return { posts: [], hasMore: false };
+  }
+
   const [commentsResult, reactionsResult, userReactionsResult] = await Promise.all([
     supabase
       .from("match_comments")
