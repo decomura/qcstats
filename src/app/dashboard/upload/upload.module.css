@@ -474,3 +474,27 @@
 .btnRetry:hover {
   background: rgba(255, 107, 0, 0.1);
 }
+
+/* ─── Debug Overlay ─── */
+
+.debugBtn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  cursor: pointer;
+  z-index: 10;
+  transition: all 0.2s;
+  backdrop-filter: blur(4px);
+}
+
+.debugBtn:hover {
+  background: rgba(204, 68, 0, 0.5);
+  border-color: var(--accent-orange);
+}

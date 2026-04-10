@@ -8,6 +8,7 @@ import {
   type OCRResult,
   type OCRProgress,
 } from "@/lib/ocr/engine";
+import { drawDebugOverlay } from "@/lib/ocr/debug";
 import { saveMatch } from "@/lib/services/matches";
 import { createClient } from "@/lib/supabase/client";
 import styles from "./upload.module.css";
@@ -26,6 +27,8 @@ export default function UploadPage() {
   const [savedMatchId, setSavedMatchId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const debugCanvasRef = useRef<HTMLCanvasElement>(null);
+  const [showDebug, setShowDebug] = useState(false);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -254,10 +257,26 @@ export default function UploadPage() {
             </div>
           </div>
 
-          {/* Image preview small */}
+          {/* Image preview with optional debug overlay */}
           {imageUrl && (
-            <div className={styles.imagePreview}>
-              <img src={imageUrl} alt="Processed screenshot" />
+            <div className={styles.imagePreview} style={{ position: "relative" }}>
+              <img src={imageUrl} alt="Processed screenshot" style={{ display: showDebug ? "none" : "block" }} />
+              <canvas
+                ref={debugCanvasRef}
+                style={{ display: showDebug ? "block" : "none", width: "100%", height: "auto" }}
+              />
+              <button
+                className={styles.debugBtn}
+                onClick={() => {
+                  const next = !showDebug;
+                  setShowDebug(next);
+                  if (next && canvasRef.current && debugCanvasRef.current) {
+                    drawDebugOverlay(canvasRef.current, debugCanvasRef.current);
+                  }
+                }}
+              >
+                {showDebug ? "🖼️ Image" : "🔍 Debug Overlay"}
+              </button>
             </div>
           )}
 
