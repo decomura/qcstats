@@ -1,0 +1,147 @@
+/* ============================================
+   CommentSection – Inline Comments
+   ============================================ */
+
+.commentSection {
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 8px;
+  margin-top: 8px;
+}
+
+.commentList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.comment {
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 8px;
+  border-left: 2px solid var(--accent-red);
+}
+
+.commentHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.commentAuthor {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--accent-orange);
+  font-family: var(--font-display, 'Rajdhani', sans-serif);
+}
+
+.commentAvatar {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.commentTime {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+}
+
+.deleteBtn {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.7rem;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.deleteBtn:hover {
+  color: var(--accent-red-bright);
+  background: rgba(204, 0, 0, 0.1);
+}
+
+.commentText {
+  font-size: 0.8rem;
+  color: var(--text-primary);
+  margin: 0;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.showMoreBtn {
+  background: none;
+  border: none;
+  color: var(--text-link);
+  font-size: 0.75rem;
+  cursor: pointer;
+  padding: 4px 0;
+  margin-bottom: 8px;
+  transition: color 0.2s;
+}
+
+.showMoreBtn:hover {
+  color: var(--accent-cyan);
+  text-decoration: underline;
+}
+
+/* ---- Comment Form ---- */
+
+.commentForm {
+  display: flex;
+  gap: 6px;
+}
+
+.commentInput {
+  flex: 1;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-subtle);
+  border-radius: 20px;
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.commentInput:focus {
+  border-color: var(--accent-red);
+}
+
+.commentInput::placeholder {
+  color: var(--text-muted);
+}
+
+.submitBtn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--accent-red);
+  border: none;
+  color: white;
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.submitBtn:hover:not(:disabled) {
+  background: var(--accent-red-bright);
+  box-shadow: var(--glow-red);
+}
+
+.submitBtn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}

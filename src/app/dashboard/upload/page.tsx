@@ -30,6 +30,7 @@ export default function UploadPage() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const debugCanvasRef = useRef<HTMLCanvasElement>(null);
   const [showDebug, setShowDebug] = useState(false);
+  const [description, setDescription] = useState("");
 
   // Cleanup on unmount
   useEffect(() => {
@@ -138,7 +139,7 @@ export default function UploadPage() {
         return;
       }
 
-      const saveResult = await saveMatch(result, imageFile, user.id);
+      const saveResult = await saveMatch(result, imageFile, user.id, undefined, description);
 
       if (saveResult.isDuplicate) {
         setError("This match already exists in the database. Duplicate detected!");
@@ -264,6 +265,30 @@ export default function UploadPage() {
                 💾 SAVE MATCH
               </button>
             </div>
+          </div>
+
+          {/* Description for Wall */}
+          <div style={{ margin: "0.75rem 0", padding: "0 0.5rem" }}>
+            <label style={{ display: "block", fontSize: "0.8rem", color: "var(--text-secondary)", marginBottom: "4px", fontFamily: "var(--font-display)" }}>
+              💬 Komentarz do walla (opcjonalnie)
+            </label>
+            <input
+              type="text"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              maxLength={300}
+              placeholder="np. Co za mecz! Railgun na 60%!"
+              style={{
+                width: "100%",
+                padding: "8px 12px",
+                background: "rgba(255,255,255,0.04)",
+                border: "1px solid var(--border-subtle)",
+                borderRadius: "8px",
+                color: "var(--text-primary)",
+                fontSize: "0.85rem",
+                outline: "none",
+              }}
+            />
           </div>
 
           {/* Image preview with optional debug overlay */}

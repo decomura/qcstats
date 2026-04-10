@@ -122,7 +122,8 @@ export async function saveMatch(
     player2Nick?: string;
     player1Score?: number;
     player2Score?: number;
-  }
+  },
+  description?: string
 ): Promise<SaveMatchResult> {
   const supabase = createClient();
 
@@ -158,6 +159,7 @@ export async function saveMatch(
       uploaded_by: userId,
       screenshot_url: screenshotUrl,
       match_date: new Date().toISOString(),
+      description: description?.trim() || "",
     })
     .select("id")
     .single();
