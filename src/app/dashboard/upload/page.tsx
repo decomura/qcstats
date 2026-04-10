@@ -25,6 +25,7 @@ export default function UploadPage() {
   const [isDragging, setIsDragging] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [savedMatchId, setSavedMatchId] = useState<string | null>(null);
+  const [variant, setVariant] = useState<"total_score" | "ranking">("total_score");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const debugCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -104,14 +105,14 @@ export default function UploadPage() {
     try {
       const canvas = await loadImageToCanvas(imageFile);
       canvasRef.current = canvas;
-      const ocrResult = await processScreenshot(canvas, setProgress);
+      const ocrResult = await processScreenshot(canvas, setProgress, variant);
       setResult(ocrResult);
       setStage("results");
     } catch (err) {
       setError(err instanceof Error ? err.message : "OCR processing failed");
       setStage("error");
     }
-  }, [imageFile]);
+  }, [imageFile, variant]);
 
   const reset = useCallback(() => {
     setStage("idle");
@@ -211,6 +212,14 @@ export default function UploadPage() {
           <div className={styles.previewHeader}>
             <h2>📋 Screenshot Preview</h2>
             <div className={styles.previewActions}>
+              <select
+                className={styles.variantSelect}
+                value={variant}
+                onChange={(e) => setVariant(e.target.value as "total_score" | "ranking")}
+              >
+                <option value="total_score">ŁĄCZNY WYNIK</option>
+                <option value="ranking">RANKING</option>
+              </select>
               <button className={styles.btnCancel} onClick={reset}>
                 ✕ Cancel
               </button>

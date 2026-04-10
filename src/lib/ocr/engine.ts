@@ -267,7 +267,8 @@ function parseValue(
  */
 export async function processScreenshot(
   canvas: HTMLCanvasElement,
-  onProgress?: (progress: OCRProgress) => void
+  onProgress?: (progress: OCRProgress) => void,
+  variant: "total_score" | "ranking" = "total_score"
 ): Promise<OCRResult> {
   const report = (stage: OCRProgress["stage"], progress: number, message: string) => {
     onProgress?.({ stage, progress, message });
@@ -292,14 +293,14 @@ export async function processScreenshot(
       : null;
     if (saved) {
       const data = JSON.parse(saved);
-      // Try "total_score" variant first (most common)
-      const profile = data["total_score"] || data["ranking"];
+      // Use the specific variant's calibration
+      const profile = data[variant] || data["total_score"] || data["ranking"];
       if (profile) {
         activeRegions = ALL_REGIONS.map((r) => ({
           ...r,
           box: profile[r.name] || r.box,
         }));
-        report("preprocessing", 7, "Using saved calibration profile ✓");
+        report("preprocessing", 7, `Using calibration: ${variant} ✓`);
       }
     }
   } catch { /* fallback to defaults */ }
