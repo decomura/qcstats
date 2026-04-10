@@ -105,7 +105,7 @@ export default function UploadPage() {
     try {
       const canvas = await loadImageToCanvas(imageFile);
       canvasRef.current = canvas;
-      const ocrResult = await processScreenshot(canvas, setProgress, variant);
+      const ocrResult = await processScreenshot(canvas, setProgress, variant, imageFile);
       setResult(ocrResult);
       setStage("results");
     } catch (err) {

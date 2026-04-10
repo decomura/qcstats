@@ -1,23 +1,13 @@
 /**
  * QCStats OCR Engine
  * 
- * Client-side OCR using Transformers.js (TrOCR model).
- * Processes QC ranking screenshots by:
- * 1. Loading image onto canvas
- * 2. Detecting aspect ratio
- * 3. Cropping regions (no binarization/preprocessing needed!)
- * 4. Running TrOCR on each cropped region
- * 5. Parsing and validating results
+ * Client-side orchestrator that sends screenshots to
+ * the Gemini Vision API endpoint for structured extraction.
+ * 
+ * No local OCR, no preprocessing, no bounding boxes needed!
  */
 
-import { pipeline, type ImageToTextPipeline } from "@huggingface/transformers";
-import {
-  ALL_REGIONS,
-  WEAPON_NAMES,
-  scaleBox,
-  type OCRRegion,
-  type BoundingBox,
-} from "./regions";
+import { WEAPON_NAMES } from "./regions";
 
 // =====================================================
 // TYPES
@@ -69,68 +59,8 @@ export interface OCRProgress {
 }
 
 // =====================================================
-// TrOCR PIPELINE (replaces Tesseract.js)
+// IMAGE UTILITIES
 // =====================================================
-
-let ocrPipeline: ImageToTextPipeline | null = null;
-let pipelineLoading: Promise<ImageToTextPipeline> | null = null;
-
-/**
- * Get or create the TrOCR pipeline (singleton with loading lock)
- */
-async function getOCR(): Promise<ImageToTextPipeline> {
-  if (ocrPipeline) return ocrPipeline;
-
-  // Prevent multiple simultaneous loads
-  if (pipelineLoading) return pipelineLoading;
-
-  pipelineLoading = pipeline(
-    "image-to-text",
-    "Xenova/trocr-small-printed",
-    { device: "wasm" }
-  ) as Promise<ImageToTextPipeline>;
-
-  ocrPipeline = await pipelineLoading;
-  pipelineLoading = null;
-  return ocrPipeline;
-}
-
-// =====================================================
-// REGION CROPPING (no preprocessing needed!)
-// =====================================================
-
-/**
- * Crop a region from the canvas — NO binarization, NO contrast adjustment.
- * TrOCR handles raw image data natively.
- * We only upscale slightly for better model accuracy.
- */
-function cropRegion(
-  canvas: HTMLCanvasElement,
-  box: BoundingBox
-): HTMLCanvasElement {
-  const scale = 2; // mild upscale for clarity
-  const cropCanvas = document.createElement("canvas");
-  cropCanvas.width = box.width * scale;
-  cropCanvas.height = box.height * scale;
-
-  const ctx = cropCanvas.getContext("2d")!;
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = "high";
-
-  ctx.drawImage(
-    canvas,
-    box.x,
-    box.y,
-    box.width,
-    box.height,
-    0,
-    0,
-    cropCanvas.width,
-    cropCanvas.height
-  );
-
-  return cropCanvas;
-}
 
 /**
  * Load image file into canvas
@@ -159,197 +89,138 @@ export function loadImageToCanvas(file: File): Promise<HTMLCanvasElement> {
   });
 }
 
-// =====================================================
-// SCREEN TYPE DETECTION
-// =====================================================
-
 /**
- * Detect screen type from aspect ratio
+ * Convert a File to a base64 data URL
  */
-function detectScreenType(
-  canvas: HTMLCanvasElement
-): "ranking_16_9" | "unknown" {
-  const aspect = canvas.width / canvas.height;
-
-  // 16:9 = 1.7778
-  if (Math.abs(aspect - 16 / 9) < 0.05) {
-    return "ranking_16_9";
-  }
-
-  return "unknown";
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(new Error("Failed to read file"));
+    reader.readAsDataURL(file);
+  });
 }
 
 // =====================================================
-// OCR ENGINE
+// GEMINI OCR ENGINE
 // =====================================================
 
 /**
- * Extract text from a single region using TrOCR
- */
-async function extractRegionText(
-  ocr: ImageToTextPipeline,
-  canvas: HTMLCanvasElement,
-  region: OCRRegion
-): Promise<string> {
-  const scaledBox = scaleBox(region.box, canvas.width, canvas.height);
-  const cropped = cropRegion(canvas, scaledBox);
-
-  // Convert crop to data URL for TrOCR
-  const dataUrl = cropped.toDataURL("image/png");
-
-  const results = await ocr(dataUrl);
-  const raw = (results as Array<{ generated_text: string }>)[0]?.generated_text || "";
-
-  return raw.trim();
-}
-
-/**
- * Parse raw OCR text based on region type
- */
-function parseValue(
-  raw: string,
-  type: OCRRegion["type"]
-): string | number {
-  const cleaned = raw.replace(/\s+/g, "").replace(/[^\d/%]/g, "");
-
-  switch (type) {
-    case "number":
-      return parseInt(cleaned, 10) || 0;
-    case "percentage":
-      return parseInt(cleaned.replace("%", ""), 10) || 0;
-    case "fraction":
-      // Format: "305/798"
-      return cleaned;
-    case "text":
-      return raw.trim();
-    default:
-      return raw.trim();
-  }
-}
-
-/**
- * Main OCR processing function
+ * Main OCR processing function — sends screenshot to Gemini API
  */
 export async function processScreenshot(
-  canvas: HTMLCanvasElement,
+  _canvas: HTMLCanvasElement,
   onProgress?: (progress: OCRProgress) => void,
-  variant: "total_score" | "ranking" = "total_score"
+  _variant: "total_score" | "ranking" = "total_score",
+  imageFile?: File
 ): Promise<OCRResult> {
   const report = (stage: OCRProgress["stage"], progress: number, message: string) => {
     onProgress?.({ stage, progress, message });
   };
 
-  report("loading", 0, "Ładowanie modelu TrOCR (pierwsze użycie ~60MB)...");
-  const ocr = await getOCR();
+  report("loading", 5, "Przygotowywanie screenshota...");
 
-  report("preprocessing", 5, "Wykrywanie layoutu...");
-  const screenType = detectScreenType(canvas);
-  if (screenType === "unknown") {
-    throw new Error(
-      "Unrecognized screenshot format. Please upload a 16:9 QC ranking screen."
-    );
+  // Get base64 from canvas if no file provided
+  let dataUrl: string;
+  if (imageFile) {
+    dataUrl = await fileToDataUrl(imageFile);
+  } else {
+    dataUrl = _canvas.toDataURL("image/png");
   }
 
-  // Load calibration profile from localStorage (if available)
-  let activeRegions = ALL_REGIONS;
-  try {
-    const saved = typeof window !== "undefined"
-      ? localStorage.getItem("qcstats_ocr_calibration")
-      : null;
-    if (saved) {
-      const data = JSON.parse(saved);
-      // Use the specific variant's calibration
-      const profile = data[variant] || data["total_score"] || data["ranking"];
-      if (profile) {
-        activeRegions = ALL_REGIONS.map((r) => ({
-          ...r,
-          box: profile[r.name] || r.box,
-        }));
-        report("preprocessing", 7, `Kalibracja: ${variant} ✓`);
-      }
-    }
-  } catch { /* fallback to defaults */ }
+  report("ocr", 20, "Wysyłanie do Gemini Vision AI...");
 
-  // Process all regions
-  const rawValues: Record<string, string> = {};
-  const totalRegions = activeRegions.length;
+  // Call our API route
+  const response = await fetch("/api/ocr", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ image: dataUrl }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
+
+    if (response.status === 429) {
+      throw new Error(
+        "Osiągnięto limit API. Spróbuj ponownie za minutę lub dodaj screenshot do kolejki."
+      );
+    }
+
+    throw new Error(errorData.error || `OCR failed (${response.status})`);
+  }
+
+  report("ocr", 70, "Gemini analizuje screenshot...");
+
+  const result = await response.json();
+
+  if (!result.success || !result.data) {
+    throw new Error(result.error || "Gemini nie zwróciło danych");
+  }
+
+  report("parsing", 85, "Parsowanie wyników...");
+
+  const data = result.data;
   const warnings: string[] = [];
 
-  report("ocr", 10, `Przetwarzanie ${totalRegions} regionów...`);
+  // Build player stats from Gemini response
+  const buildPlayer = (
+    raw: Record<string, unknown>,
+    side: 1 | 2
+  ): PlayerStats => {
+    const weapons: WeaponStat[] = WEAPON_NAMES.map((name, i) => {
+      const rawWeapon = (raw.weapons as Array<Record<string, unknown>>)?.[i] || {};
+      return {
+        weaponIndex: i,
+        weaponName: name,
+        hitsShots: String(rawWeapon.hitsShots || "0/0"),
+        accuracyPct: Number(rawWeapon.accuracyPct) || 0,
+        damage: Number(rawWeapon.damage) || 0,
+        kills: Number(rawWeapon.kills) || 0,
+      };
+    });
 
-  for (let i = 0; i < totalRegions; i++) {
-    const region = activeRegions[i];
-    try {
-      const text = await extractRegionText(ocr, canvas, region);
-      rawValues[region.name] = text;
-    } catch {
-      rawValues[region.name] = "";
-      warnings.push(`Failed to read region: ${region.name}`);
-    }
-
-    const progress = 10 + Math.round((i / totalRegions) * 80);
-    report("ocr", progress, `OCR: ${region.name} (${i + 1}/${totalRegions})`);
-  }
-
-  // Parse results
-  report("parsing", 90, "Parsowanie danych...");
-
-  const getVal = (name: string): string => rawValues[name] || "";
-  const getNum = (name: string): number => parseInt(getVal(name).replace(/\D/g, ""), 10) || 0;
-
-  // Build weapon stats
-  const buildWeapons = (prefix: "p1" | "p2"): WeaponStat[] => {
-    return WEAPON_NAMES.map((name, i) => ({
-      weaponIndex: i,
-      weaponName: name,
-      hitsShots: getVal(`${prefix}_w${i}_hits_shots`),
-      accuracyPct: getNum(`${prefix}_w${i}_accuracy`),
-      damage: getNum(`${prefix}_w${i}_damage`),
-      kills: getNum(`${prefix}_w${i}_kills`),
-    }));
+    return {
+      nick: String(raw.nick || ""),
+      score: Number(raw.score) || 0,
+      side,
+      totalDamage: Number(raw.totalDamage) || 0,
+      accuracyPct: Number(raw.accuracyPct) || 0,
+      hitsShots: String(raw.hitsShots || ""),
+      healing: Number(raw.healing) || 0,
+      megaHealthPickups: Number(raw.megaHealthPickups) || 0,
+      heavyArmorPickups: Number(raw.heavyArmorPickups) || 0,
+      lightArmorPickups: Number(raw.lightArmorPickups) || 0,
+      ping: Number(raw.ping) || 0,
+      xp: String(raw.xp || ""),
+      weapons,
+      isWinner: false, // set below
+    };
   };
 
-  const p1Score = getNum("player1_score");
-  const p2Score = getNum("player2_score");
+  const player1 = buildPlayer(data.player1 || {}, 1);
+  const player2 = buildPlayer(data.player2 || {}, 2);
 
-  const player1: PlayerStats = {
-    nick: getVal("player1_nick"),
-    score: p1Score,
-    side: 1,
-    totalDamage: getNum("p1_damage"),
-    accuracyPct: getNum("p1_accuracy"),
-    hitsShots: getVal("p1_hits_shots"),
-    healing: getNum("p1_healing"),
-    megaHealthPickups: getNum("p1_mega_health"),
-    heavyArmorPickups: getNum("p1_heavy_armor"),
-    lightArmorPickups: getNum("p1_light_armor"),
-    ping: getNum("p1_ping"),
-    xp: getVal("p1_xp"),
-    weapons: buildWeapons("p1"),
-    isWinner: p1Score > p2Score,
-  };
+  player1.isWinner = player1.score > player2.score;
+  player2.isWinner = player2.score > player1.score;
 
-  const player2: PlayerStats = {
-    nick: getVal("player2_nick"),
-    score: p2Score,
-    side: 2,
-    totalDamage: getNum("p2_damage"),
-    accuracyPct: getNum("p2_accuracy"),
-    hitsShots: getVal("p2_hits_shots"),
-    healing: getNum("p2_healing"),
-    megaHealthPickups: getNum("p2_mega_health"),
-    heavyArmorPickups: getNum("p2_heavy_armor"),
-    lightArmorPickups: getNum("p2_light_armor"),
-    ping: getNum("p2_ping"),
-    xp: getVal("p2_xp"),
-    weapons: buildWeapons("p2"),
-    isWinner: p2Score > p1Score,
+  // Build raw values for debugging
+  const rawValues: Record<string, string> = {
+    player1_nick: player1.nick,
+    player1_score: String(player1.score),
+    player2_nick: player2.nick,
+    player2_score: String(player2.score),
+    p1_damage: String(player1.totalDamage),
+    p1_accuracy: String(player1.accuracyPct),
+    p1_hits_shots: player1.hitsShots,
+    p2_damage: String(player2.totalDamage),
+    p2_accuracy: String(player2.accuracyPct),
+    p2_hits_shots: player2.hitsShots,
   };
 
   // Validation
   const confidence = calculateConfidence(player1, player2, warnings);
 
-  report("done", 100, "OCR zakończony!");
+  report("done", 100, "OCR zakończony! ✨");
 
   return {
     player1,
@@ -411,51 +282,39 @@ function calculateConfidence(
     warnings.push("Accuracy > 100% detected");
   }
 
-  // Penalize for region failures
-  score -= warnings.filter((w) => w.startsWith("Failed to read")).length * 2;
-
   return Math.max(0, Math.min(100, score));
 }
 
 /**
- * Clean up OCR pipeline
+ * Clean up – no-op for Gemini (no local resources)
  */
 export async function terminateOCR(): Promise<void> {
-  ocrPipeline = null;
-  pipelineLoading = null;
+  // Nothing to clean up with Gemini API
 }
 
 /**
- * Test OCR on a single region – used by the calibrator for real-time feedback.
- * Returns the raw text and a data URL of the cropped region preview.
+ * Test OCR on the full screenshot — used by the calibrator
+ * With Gemini, we don't need individual region testing anymore
+ */
+export async function testFullScreenshot(
+  imageFile: File
+): Promise<OCRResult> {
+  const canvas = await loadImageToCanvas(imageFile);
+  return processScreenshot(canvas, undefined, "total_score", imageFile);
+}
+
+/**
+ * @deprecated - With Gemini Vision, individual region testing is not needed.
+ * Kept for backward compatibility with the calibrator UI.
  */
 export async function testSingleRegion(
-  imageElement: HTMLImageElement,
-  box: BoundingBox,
-  _regionType: "text" | "number" | "fraction" | "percentage" = "number",
+  _imageElement: HTMLImageElement,
+  _box: { x: number; y: number; width: number; height: number },
+  _regionType: string = "number",
   _whitelist?: string
 ): Promise<{ text: string; previewUrl: string }> {
-  // Draw image to canvas
-  const canvas = document.createElement("canvas");
-  canvas.width = imageElement.naturalWidth;
-  canvas.height = imageElement.naturalHeight;
-  const ctx = canvas.getContext("2d")!;
-  ctx.drawImage(imageElement, 0, 0);
-
-  // Scale box from reference to actual resolution
-  const scaledBox = scaleBox(box, canvas.width, canvas.height);
-
-  // Crop region (no preprocessing needed for TrOCR!)
-  const cropped = cropRegion(canvas, scaledBox);
-
-  // Get preview data URL (shows exactly what TrOCR sees)
-  const previewUrl = cropped.toDataURL("image/png");
-
-  // Run TrOCR
-  const ocr = await getOCR();
-  const dataUrl = cropped.toDataURL("image/png");
-  const results = await ocr(dataUrl);
-  const text = (results as Array<{ generated_text: string }>)[0]?.generated_text || "";
-
-  return { text: text.trim(), previewUrl };
+  return {
+    text: "[Gemini Vision — testuj cały screenshot zamiast regionu]",
+    previewUrl: "",
+  };
 }
