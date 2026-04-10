@@ -158,12 +158,12 @@ CREATE POLICY "Matches are viewable by participants or public profiles"
         uploaded_by = auth.uid()
         OR EXISTS (
             SELECT 1 FROM public.match_players mp
-            WHERE mp.match_id = id AND mp.profile_id = auth.uid()
+            WHERE mp.match_id = matches.id AND mp.profile_id = auth.uid()
         )
         OR EXISTS (
             SELECT 1 FROM public.match_players mp
             JOIN public.profiles p ON mp.profile_id = p.id
-            WHERE mp.match_id = id AND p.is_public = true
+            WHERE mp.match_id = matches.id AND p.is_public = true
         )
     );
 
@@ -183,7 +183,7 @@ CREATE POLICY "Match players viewable if match is viewable"
     USING (
         EXISTS (
             SELECT 1 FROM public.matches m
-            WHERE m.id = match_id
+            WHERE m.id = match_players.match_id
         )
     );
 
@@ -192,7 +192,7 @@ CREATE POLICY "Authenticated users can insert match players"
     WITH CHECK (
         EXISTS (
             SELECT 1 FROM public.matches m
-            WHERE m.id = match_id AND m.uploaded_by = auth.uid()
+            WHERE m.id = match_players.match_id AND m.uploaded_by = auth.uid()
         )
     );
 
