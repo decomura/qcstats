@@ -107,38 +107,55 @@ export async function POST(request: NextRequest) {
 
     const [, mimeType, base64Data] = match;
 
-    // Call Gemini API
-    const geminiResponse = await fetch(GEMINI_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              { text: SYSTEM_PROMPT },
-              {
-                inline_data: {
-                  mime_type: mimeType,
-                  data: base64Data,
-                },
+    // Call Gemini API with retry for rate limits
+    const requestBody = JSON.stringify({
+      contents: [
+        {
+          parts: [
+            { text: SYSTEM_PROMPT },
+            {
+              inline_data: {
+                mime_type: mimeType,
+                data: base64Data,
               },
-            ],
-          },
-        ],
-        generationConfig: {
-          temperature: 0.1, // Low temperature for factual extraction
-          maxOutputTokens: 4096,
+            },
+          ],
         },
-      }),
+      ],
+      generationConfig: {
+        temperature: 0.1, // Low temperature for factual extraction
+        maxOutputTokens: 4096,
+      },
     });
 
-    if (!geminiResponse.ok) {
-      const errorData = await geminiResponse.json().catch(() => ({}));
-      const status = geminiResponse.status;
+    let geminiResponse: Response | null = null;
+    const MAX_RETRIES = 3;
+
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      geminiResponse = await fetch(GEMINI_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: requestBody,
+      });
+
+      if (geminiResponse.status === 429 && attempt < MAX_RETRIES) {
+        // Wait with exponential backoff: 2s, 4s, 8s
+        const waitMs = Math.pow(2, attempt + 1) * 1000;
+        console.log(`[OCR API] Rate limited, retrying in ${waitMs}ms (attempt ${attempt + 1}/${MAX_RETRIES})`);
+        await new Promise((r) => setTimeout(r, waitMs));
+        continue;
+      }
+
+      break;
+    }
+
+    if (!geminiResponse || !geminiResponse.ok) {
+      const errorData = await geminiResponse?.json().catch(() => ({}));
+      const status = geminiResponse?.status || 500;
 
       if (status === 429) {
         return NextResponse.json(
-          { error: "RATE_LIMIT", message: "Gemini API rate limit reached. Try again in a minute." },
+          { error: "Osiągnięto limit API. Spróbuj ponownie za minutę." },
           { status: 429 }
         );
       }
