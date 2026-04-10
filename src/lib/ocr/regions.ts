@@ -5,14 +5,14 @@
  * All coordinates are normalized to a 1024x576 reference frame (16:9 aspect ratio).
  * The actual screenshot is resized to this reference before extraction.
  * 
- * Calibrated from real QC 1920x1080 screenshots (scaled to 1024x576).
- * The QC ranking screen layout (tab "RANKING"):
- * - Top bar: player portraits, score badges, tabs
- * - Player nicks: left ~230-300, right ~610-740, y~200
- * - Score: center area ~455-540, y~190
- * - Summary row (PRZEDMIOTY/ITEMS row): y~230
- * - Weapon rows: start y~260, each row 22px tall
- * - Item pickups: left panel ~55, right panel ~940
+ * RECALIBRATED 2026-04-10 from debug overlay on real QC 1920x1080 screenshots.
+ * The QC "ŁĄCZNY WYNIK" (total score) screen layout:
+ * - Top bar: player portraits, tabs (KOSZARY, RAPORT Z WALKI, RANKING, STATYSTYKI)
+ * - Score badges: center ~490,243
+ * - Player nicks: left ~393, right ~618, y~247
+ * - Summary row (PRZEDMIOTY): y~275
+ * - Weapon rows: start y~305, 21px spacing
+ * - Item pickups: left panel x~52, right panel x~945
  */
 
 export interface BoundingBox {
@@ -41,24 +41,24 @@ export const REFERENCE_HEIGHT = 576;
 // =====================================================
 // PLAYER NICKS & SCORE
 // =====================================================
-// Calibrated from 1920x1080 screenshot:
-// Nick "Dziador" is at ~440-570,380 in 1920px → ~235-305,203 in 1024px
-// Nick "LuqAtMe" is at ~1140-1300,380 in 1920px → ~608-695,203 in 1024px
-// Score "12" at ~868-890,365 in 1920px → ~464-476,195 in 1024px
-// Score "13" at ~968-990,365 in 1920px → ~517-530,195 in 1024px
+// Measured from debug overlay on 1024x576 reference:
+// Nick "Dziador": x≈393, y≈247, width≈65
+// Nick "LuqAtMe": x≈618, y≈247, width≈70  
+// Score "12": x≈485, y≈240, width≈22
+// Score "13": x≈515, y≈240, width≈22
 
 const playerRegions: OCRRegion[] = [
   // Player 1 (left side)
   {
     name: "player1_nick",
-    box: { x: 230, y: 195, width: 85, height: 22 },
+    box: { x: 385, y: 242, width: 80, height: 20 },
     type: "text",
     whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-.",
     player: 1,
   },
   {
     name: "player1_score",
-    box: { x: 456, y: 188, width: 32, height: 28 },
+    box: { x: 480, y: 237, width: 28, height: 25 },
     type: "number",
     whitelist: "0123456789",
     player: 1,
@@ -66,14 +66,14 @@ const playerRegions: OCRRegion[] = [
   // Player 2 (right side)
   {
     name: "player2_nick",
-    box: { x: 600, y: 195, width: 110, height: 22 },
+    box: { x: 610, y: 242, width: 85, height: 20 },
     type: "text",
     whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-.",
     player: 2,
   },
   {
     name: "player2_score",
-    box: { x: 520, y: 188, width: 32, height: 28 },
+    box: { x: 514, y: 237, width: 28, height: 25 },
     type: "number",
     whitelist: "0123456789",
     player: 2,
@@ -83,44 +83,42 @@ const playerRegions: OCRRegion[] = [
 // =====================================================
 // SUMMARY ROW (per player) – the "PRZEDMIOTY 4236 0 N/O 1650 364/1022 35% 4889 12" line
 // =====================================================
-// In 1920px: this row is at y~416 → in 1024px: y~222
-// Columns left→right for P1: PRZEDMIOTY(~35), PD(~125), PING(~165), WYNIK(~195), ULECZ.PZ(~230),
-//   TRAFIENIA(~290), CELN.%(~370), OBR.(~410), WYNIK(~450)
-// P2 mirrors from center
+// Measured from debug overlay: summary row sits at y≈275
+// Columns layout (1024px reference):
+// P1 left→right: PRZEDMIOTY(~232) PD(~286) PING(~310) WYNIK(~340) ULECZ.PZ(~365)
+//   TRAFIENIA(~395) CELN.%(~440) OBR.(~470) WYNIK(~500)
+// P2 left→right: WYNIK(~530) OBR.(~555) P2 mirrors from center
 
-const SUMMARY_Y = 222;
+const SUMMARY_Y = 273;
 
 const summaryRegionsP1: OCRRegion[] = [
-  { name: "p1_items", box: { x: 25, y: SUMMARY_Y, width: 60, height: 18 }, type: "text", whitelist: "PRZEDMIOTY0123456789 ", player: 1 },
-  { name: "p1_pd", box: { x: 100, y: SUMMARY_Y, width: 45, height: 18 }, type: "number", whitelist: "0123456789", player: 1 },
-  { name: "p1_ping", box: { x: 148, y: SUMMARY_Y, width: 22, height: 18 }, type: "number", whitelist: "0123456789", player: 1 },
-  { name: "p1_xp", box: { x: 170, y: SUMMARY_Y, width: 35, height: 18 }, type: "text", whitelist: "0123456789N/OD", player: 1 },
-  { name: "p1_healing", box: { x: 210, y: SUMMARY_Y, width: 45, height: 18 }, type: "number", whitelist: "0123456789", player: 1 },
-  { name: "p1_hits_shots", box: { x: 255, y: SUMMARY_Y, width: 70, height: 18 }, type: "fraction", whitelist: "0123456789/", player: 1 },
-  { name: "p1_accuracy", box: { x: 330, y: SUMMARY_Y, width: 35, height: 18 }, type: "percentage", whitelist: "0123456789%", player: 1 },
-  { name: "p1_damage", box: { x: 370, y: SUMMARY_Y, width: 50, height: 18 }, type: "number", whitelist: "0123456789", player: 1 },
-  { name: "p1_kills", box: { x: 428, y: SUMMARY_Y, width: 25, height: 18 }, type: "number", whitelist: "0123456789", player: 1 },
+  { name: "p1_pd",         box: { x: 276, y: SUMMARY_Y, width: 45, height: 17 }, type: "number", whitelist: "0123456789", player: 1 },
+  { name: "p1_ping",       box: { x: 310, y: SUMMARY_Y, width: 22, height: 17 }, type: "number", whitelist: "0123456789", player: 1 },
+  { name: "p1_xp",         box: { x: 332, y: SUMMARY_Y, width: 30, height: 17 }, type: "text", whitelist: "0123456789N/OD", player: 1 },
+  { name: "p1_healing",    box: { x: 360, y: SUMMARY_Y, width: 42, height: 17 }, type: "number", whitelist: "0123456789", player: 1 },
+  { name: "p1_hits_shots", box: { x: 395, y: SUMMARY_Y, width: 65, height: 17 }, type: "fraction", whitelist: "0123456789/", player: 1 },
+  { name: "p1_accuracy",   box: { x: 442, y: SUMMARY_Y, width: 32, height: 17 }, type: "percentage", whitelist: "0123456789%", player: 1 },
+  { name: "p1_damage",     box: { x: 462, y: SUMMARY_Y, width: 42, height: 17 }, type: "number", whitelist: "0123456789", player: 1 },
+  { name: "p1_kills",      box: { x: 500, y: SUMMARY_Y, width: 22, height: 17 }, type: "number", whitelist: "0123456789", player: 1 },
 ];
 
 const summaryRegionsP2: OCRRegion[] = [
-  { name: "p2_kills", box: { x: 530, y: SUMMARY_Y, width: 25, height: 18 }, type: "number", whitelist: "0123456789", player: 2 },
-  { name: "p2_damage", box: { x: 555, y: SUMMARY_Y, width: 50, height: 18 }, type: "number", whitelist: "0123456789", player: 2 },
-  { name: "p2_accuracy", box: { x: 610, y: SUMMARY_Y, width: 35, height: 18 }, type: "percentage", whitelist: "0123456789%", player: 2 },
-  { name: "p2_hits_shots", box: { x: 648, y: SUMMARY_Y, width: 70, height: 18 }, type: "fraction", whitelist: "0123456789/", player: 2 },
-  { name: "p2_healing", box: { x: 720, y: SUMMARY_Y, width: 45, height: 18 }, type: "number", whitelist: "0123456789", player: 2 },
-  { name: "p2_xp", box: { x: 770, y: SUMMARY_Y, width: 35, height: 18 }, type: "text", whitelist: "0123456789N/OD", player: 2 },
-  { name: "p2_ping", box: { x: 810, y: SUMMARY_Y, width: 35, height: 18 }, type: "number", whitelist: "0123456789", player: 2 },
-  { name: "p2_pd", box: { x: 855, y: SUMMARY_Y, width: 45, height: 18 }, type: "number", whitelist: "0123456789", player: 2 },
+  { name: "p2_kills",      box: { x: 525, y: SUMMARY_Y, width: 22, height: 17 }, type: "number", whitelist: "0123456789", player: 2 },
+  { name: "p2_damage",     box: { x: 545, y: SUMMARY_Y, width: 42, height: 17 }, type: "number", whitelist: "0123456789", player: 2 },
+  { name: "p2_accuracy",   box: { x: 585, y: SUMMARY_Y, width: 32, height: 17 }, type: "percentage", whitelist: "0123456789%", player: 2 },
+  { name: "p2_hits_shots", box: { x: 615, y: SUMMARY_Y, width: 65, height: 17 }, type: "fraction", whitelist: "0123456789/", player: 2 },
+  { name: "p2_healing",    box: { x: 675, y: SUMMARY_Y, width: 42, height: 17 }, type: "number", whitelist: "0123456789", player: 2 },
+  { name: "p2_xp",         box: { x: 712, y: SUMMARY_Y, width: 30, height: 17 }, type: "text", whitelist: "0123456789N/OD", player: 2 },
+  { name: "p2_ping",       box: { x: 740, y: SUMMARY_Y, width: 22, height: 17 }, type: "number", whitelist: "0123456789", player: 2 },
+  { name: "p2_pd",         box: { x: 760, y: SUMMARY_Y, width: 45, height: 17 }, type: "number", whitelist: "0123456789", player: 2 },
 ];
 
 // =====================================================
 // WEAPON STATS ROWS (11 weapons per player)
 // =====================================================
-// Weapon rows in 1920px start at y~470 with ~40px spacing → in 1024px: start y~251, spacing ~21px
-// Each row columns (1024px reference):
-// P1: hits/shots ~250, accuracy ~330, damage ~365, kills ~425  (OBR. column)
-// [weapon icon in center ~470]
-// P2: kills ~530, damage ~555, celność ~610, hits/shots ~648
+// Measured from debug overlay: weapon rows start at y≈302, spacing≈21px
+// P1 columns (1024px): hits/shots ~295, accuracy ~370, damage ~410, kills ~458
+// P2 columns (1024px): kills ~530, damage ~565, accuracy ~615, hits/shots ~660
 
 const WEAPON_NAMES = [
   "Gauntlet",
@@ -136,7 +134,7 @@ const WEAPON_NAMES = [
   "Tribolt",
 ] as const;
 
-const WEAPON_ROW_START_Y = 250;
+const WEAPON_ROW_START_Y = 302;
 const WEAPON_ROW_HEIGHT = 21;
 
 function generateWeaponRegions(): OCRRegion[] {
@@ -150,7 +148,7 @@ function generateWeaponRegions(): OCRRegion[] {
     regions.push(
       {
         name: `p1_w${i}_hits_shots`,
-        box: { x: 250, y, width: 70, height: 17 },
+        box: { x: 295, y, width: 65, height: 17 },
         type: "fraction",
         whitelist: "0123456789/",
         player: 1,
@@ -158,7 +156,7 @@ function generateWeaponRegions(): OCRRegion[] {
       },
       {
         name: `p1_w${i}_accuracy`,
-        box: { x: 328, y, width: 38, height: 17 },
+        box: { x: 370, y, width: 35, height: 17 },
         type: "percentage",
         whitelist: "0123456789%",
         player: 1,
@@ -166,7 +164,7 @@ function generateWeaponRegions(): OCRRegion[] {
       },
       {
         name: `p1_w${i}_damage`,
-        box: { x: 368, y, width: 45, height: 17 },
+        box: { x: 410, y, width: 42, height: 17 },
         type: "number",
         whitelist: "0123456789",
         player: 1,
@@ -174,7 +172,7 @@ function generateWeaponRegions(): OCRRegion[] {
       },
       {
         name: `p1_w${i}_kills`,
-        box: { x: 425, y, width: 25, height: 17 },
+        box: { x: 458, y, width: 22, height: 17 },
         type: "number",
         whitelist: "0123456789",
         player: 1,
@@ -187,7 +185,7 @@ function generateWeaponRegions(): OCRRegion[] {
     regions.push(
       {
         name: `p2_w${i}_kills`,
-        box: { x: 530, y, width: 25, height: 17 },
+        box: { x: 530, y, width: 22, height: 17 },
         type: "number",
         whitelist: "0123456789",
         player: 2,
@@ -195,7 +193,7 @@ function generateWeaponRegions(): OCRRegion[] {
       },
       {
         name: `p2_w${i}_damage`,
-        box: { x: 555, y, width: 45, height: 17 },
+        box: { x: 555, y, width: 42, height: 17 },
         type: "number",
         whitelist: "0123456789",
         player: 2,
@@ -203,7 +201,7 @@ function generateWeaponRegions(): OCRRegion[] {
       },
       {
         name: `p2_w${i}_accuracy`,
-        box: { x: 605, y, width: 38, height: 17 },
+        box: { x: 605, y, width: 35, height: 17 },
         type: "percentage",
         whitelist: "0123456789%",
         player: 2,
@@ -211,7 +209,7 @@ function generateWeaponRegions(): OCRRegion[] {
       },
       {
         name: `p2_w${i}_hits_shots`,
-        box: { x: 648, y, width: 70, height: 17 },
+        box: { x: 650, y, width: 65, height: 17 },
         type: "fraction",
         whitelist: "0123456789/",
         player: 2,
@@ -226,19 +224,19 @@ function generateWeaponRegions(): OCRRegion[] {
 // =====================================================
 // ITEM PICKUPS (left/right side panels)
 // =====================================================
-// In 1920px: left shields at x~120, values below each shield
-// MegaHP at y~398, HeavyArmor at y~515, LightArmor at y~633 → in 1024: y~213, 275, 338
-// Right panel mirrors at x~940
+// Measured from debug overlay:
+// Left panel (P1): x~52, MegaHP y~330, HeavyArmor y~375, LightArmor y~416
+// Right panel (P2): x~945
 
 const itemRegions: OCRRegion[] = [
   // Player 1 items (left panel - green shields)
-  { name: "p1_mega_health", box: { x: 52, y: 275, width: 25, height: 22 }, type: "number", whitelist: "0123456789", player: 1 },
-  { name: "p1_heavy_armor", box: { x: 52, y: 340, width: 25, height: 22 }, type: "number", whitelist: "0123456789", player: 1 },
-  { name: "p1_light_armor", box: { x: 52, y: 405, width: 25, height: 22 }, type: "number", whitelist: "0123456789", player: 1 },
+  { name: "p1_mega_health", box: { x: 52, y: 328, width: 25, height: 22 }, type: "number", whitelist: "0123456789", player: 1 },
+  { name: "p1_heavy_armor", box: { x: 52, y: 373, width: 25, height: 22 }, type: "number", whitelist: "0123456789", player: 1 },
+  { name: "p1_light_armor", box: { x: 52, y: 416, width: 25, height: 22 }, type: "number", whitelist: "0123456789", player: 1 },
   // Player 2 items (right panel - green shields)
-  { name: "p2_mega_health", box: { x: 945, y: 275, width: 25, height: 22 }, type: "number", whitelist: "0123456789", player: 2 },
-  { name: "p2_heavy_armor", box: { x: 945, y: 340, width: 25, height: 22 }, type: "number", whitelist: "0123456789", player: 2 },
-  { name: "p2_light_armor", box: { x: 945, y: 405, width: 25, height: 22 }, type: "number", whitelist: "0123456789", player: 2 },
+  { name: "p2_mega_health", box: { x: 945, y: 328, width: 25, height: 22 }, type: "number", whitelist: "0123456789", player: 2 },
+  { name: "p2_heavy_armor", box: { x: 945, y: 373, width: 25, height: 22 }, type: "number", whitelist: "0123456789", player: 2 },
+  { name: "p2_light_armor", box: { x: 945, y: 416, width: 25, height: 22 }, type: "number", whitelist: "0123456789", player: 2 },
 ];
 
 // =====================================================
