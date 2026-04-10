@@ -1,18 +1,51 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
 import styles from "./login.module.css";
 
-export default function LoginPage() {
+function LoginContent() {
+
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<"login" | "register">("login");
+  const [inviteCode, setInviteCode] = useState<string | null>(null);
+
+  // Check for invite code in URL params
+  useEffect(() => {
+    const invite = searchParams.get("invite");
+    if (invite) {
+      setInviteCode(invite);
+      localStorage.setItem("qcstats_invite", invite);
+      setMode("register");
+    } else {
+      const stored = localStorage.getItem("qcstats_invite");
+      if (stored) setInviteCode(stored);
+    }
+  }, [searchParams]);
+
+  // Process invite code after successful auth
+  const processInvite = async () => {
+    const code = localStorage.getItem("qcstats_invite");
+    if (!code) return;
+    try {
+      await fetch("/api/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ invite_code: code }),
+      });
+    } catch {
+      // Silently fail – friendship is nice-to-have, not critical
+    } finally {
+      localStorage.removeItem("qcstats_invite");
+    }
+  };
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,6 +72,7 @@ export default function LoginPage() {
         setLoading(false);
         return;
       }
+      await processInvite();
       router.push("/dashboard");
       router.refresh();
     } catch (err: unknown) {
@@ -50,10 +84,14 @@ export default function LoginPage() {
 
   const handleGoogleLogin = async () => {
     setError(null);
+    // Include invite code in redirect so auth callback can pass it through
+    const callbackUrl = inviteCode
+      ? `${window.location.origin}/auth/callback?invite=${inviteCode}`
+      : `${window.location.origin}/auth/callback`;
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: callbackUrl,
       },
     });
     if (error) setError(error.message);
@@ -62,13 +100,22 @@ export default function LoginPage() {
   return (
     <div className={styles.loginPage}>
       <div className={styles.loginContainer}>
+        {/* Invite Banner */}
+        {inviteCode && (
+          <div className={styles.inviteBanner}>
+            🎮 You've been invited to join QCStats!
+          </div>
+        )}
+
         {/* Logo */}
         <div className={styles.logo}>
           <span className={styles.logoQc}>QC</span>
           <span className={styles.logoStats}>STATS</span>
         </div>
         <p className={styles.tagline}>
-          {mode === "login"
+          {inviteCode
+            ? "Register to join your friend in the arena!"
+            : mode === "login"
             ? "Enter the arena. Track your stats."
             : "Join the arena. Start tracking."}
         </p>
@@ -186,5 +233,13 @@ export default function LoginPage() {
         </a>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginContent />
+    </Suspense>
   );
 }

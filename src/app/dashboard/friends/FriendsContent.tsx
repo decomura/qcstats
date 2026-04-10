@@ -34,6 +34,7 @@ interface Notification {
 
 interface Props {
   userId: string;
+  inviteCode: string;
   friendships: Friendship[];
   notifications: Notification[];
 }
@@ -42,7 +43,7 @@ function getProfile(data: Profile | Profile[]): Profile {
   return Array.isArray(data) ? data[0] : data;
 }
 
-export default function FriendsContent({ userId, friendships, notifications }: Props) {
+export default function FriendsContent({ userId, inviteCode, friendships, notifications }: Props) {
   const { t } = useI18n();
   const supabase = createClient();
   const [searchName, setSearchName] = useState("");
@@ -52,6 +53,11 @@ export default function FriendsContent({ userId, friendships, notifications }: P
   const [localFriendships, setLocalFriendships] = useState(friendships);
   const [localNotifications, setLocalNotifications] = useState(notifications);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [inviteEmails, setInviteEmails] = useState("");
+  const [sendingInvite, setSendingInvite] = useState(false);
+
+  const inviteUrl = `${typeof window !== "undefined" ? window.location.origin : "https://qcstats.vercel.app"}/login?invite=${inviteCode}`;
 
   const accepted = localFriendships.filter((f) => f.status === "accepted");
   const pendingReceived = localFriendships.filter(
@@ -60,6 +66,60 @@ export default function FriendsContent({ userId, friendships, notifications }: P
   const pendingSent = localFriendships.filter(
     (f) => f.status === "pending" && f.requester_id === userId
   );
+
+  const copyInviteLink = async () => {
+    try {
+      await navigator.clipboard.writeText(inviteUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Fallback for older browsers
+      const input = document.createElement("input");
+      input.value = inviteUrl;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand("copy");
+      document.body.removeChild(input);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const sendEmailInvites = async () => {
+    if (!inviteEmails.trim()) return;
+    setSendingInvite(true);
+
+    const emails = inviteEmails
+      .split(/[,;\s]+/)
+      .map((e) => e.trim())
+      .filter((e) => e.includes("@"));
+
+    if (emails.length === 0) {
+      setMessage({ type: "error", text: "Enter valid email addresses." });
+      setSendingInvite(false);
+      return;
+    }
+
+    // For now, just copy invite link since Supabase free tier has email limits
+    // In the future, this could use Resend or custom SMTP
+    const mailtoLinks = emails.map(
+      (email) =>
+        `mailto:${email}?subject=${encodeURIComponent("Join me on QCStats! 🎮")}&body=${encodeURIComponent(
+          `Hey! I'm using QCStats to track my Quake Champions stats.\n\nJoin me and let's compare our accuracy!\n\n${inviteUrl}\n\nSee you in the arena! ⚡`
+        )}`
+    );
+
+    // Open first mailto link
+    window.open(mailtoLinks[0]);
+
+    setMessage({
+      type: "success",
+      text: `Email client opened for ${emails.length} invite(s). Link also copied! 📧`,
+    });
+    await navigator.clipboard.writeText(inviteUrl);
+    setInviteEmails("");
+    setSendingInvite(false);
+  };
 
   const handleSearch = async () => {
     if (!searchName.trim()) return;
@@ -146,7 +206,52 @@ export default function FriendsContent({ userId, friendships, notifications }: P
         👥 <span className={styles.accent}>{t("friends.title")}</span>
       </h1>
 
-      {/* Search */}
+      {/* ═══════════ INVITE SECTION ═══════════ */}
+      <div className={styles.inviteSection}>
+        <h2 className={styles.inviteTitle}>🔗 Invite Friends</h2>
+        <p className={styles.inviteDesc}>
+          Share your personal invite link. Anyone who registers through it becomes your friend automatically!
+        </p>
+
+        {/* Invite Link */}
+        <div className={styles.inviteLinkBox}>
+          <input
+            type="text"
+            readOnly
+            value={inviteUrl}
+            className={styles.inviteLinkInput}
+            onClick={(e) => (e.target as HTMLInputElement).select()}
+          />
+          <button onClick={copyInviteLink} className={styles.copyBtn}>
+            {copied ? "✓ Copied!" : "📋 Copy"}
+          </button>
+        </div>
+
+        {/* Invite Code Badge */}
+        <div className={styles.inviteCodeBadge}>
+          Your code: <span className={styles.codeValue}>{inviteCode}</span>
+        </div>
+
+        {/* Email Invite */}
+        <div className={styles.emailInvite}>
+          <input
+            type="text"
+            value={inviteEmails}
+            onChange={(e) => setInviteEmails(e.target.value)}
+            placeholder="Enter emails (comma-separated)..."
+            className={styles.emailInput}
+          />
+          <button
+            onClick={sendEmailInvites}
+            className={styles.sendEmailBtn}
+            disabled={sendingInvite || !inviteEmails.trim()}
+          >
+            {sendingInvite ? "..." : "📧 Send"}
+          </button>
+        </div>
+      </div>
+
+      {/* ═══════════ SEARCH ═══════════ */}
       <div className={styles.searchBox}>
         <input
           type="text"
@@ -293,7 +398,7 @@ export default function FriendsContent({ userId, friendships, notifications }: P
             localNotifications.map((n) => (
               <div key={n.id} className={styles.notifRow}>
                 <span className={styles.notifIcon}>
-                  {n.type === "friend_request" ? "👤" : n.type === "friend_accepted" ? "🤝" : "📢"}
+                  {n.type === "friend_request" ? "👤" : n.type === "friend_accepted" || n.type === "friend_joined" ? "🤝" : "📢"}
                 </span>
                 <div className={styles.notifContent}>
                   <span className={styles.notifTitle}>{n.title}</span>

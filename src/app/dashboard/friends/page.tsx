@@ -16,6 +16,15 @@ export default async function FriendsPage() {
 
   if (!user) redirect("/login");
 
+  // Get user's invite code
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("invite_code")
+    .eq("id", user.id)
+    .single();
+
+  const inviteCode = profile?.invite_code || "NONE";
+
   // Get friends (accepted)
   const { data: friendships } = await supabase
     .from("friends")
@@ -43,6 +52,7 @@ export default async function FriendsPage() {
   return (
     <FriendsContent
       userId={user.id}
+      inviteCode={inviteCode}
       friendships={friendships || []}
       notifications={notifications || []}
     />

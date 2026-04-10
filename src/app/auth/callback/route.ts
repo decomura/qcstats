@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
+  const invite = searchParams.get("invite");
   const next = searchParams.get("next") ?? "/dashboard";
 
   if (code) {
@@ -12,13 +13,24 @@ export async function GET(request: Request) {
     if (!error) {
       const forwardedHost = request.headers.get("x-forwarded-host");
       const isLocalEnv = process.env.NODE_ENV === "development";
+
+      // Build redirect URL
+      let redirectBase: string;
       if (isLocalEnv) {
-        return NextResponse.redirect(`${origin}${next}`);
+        redirectBase = origin;
       } else if (forwardedHost) {
-        return NextResponse.redirect(`https://${forwardedHost}${next}`);
+        redirectBase = `https://${forwardedHost}`;
       } else {
-        return NextResponse.redirect(`${origin}${next}`);
+        redirectBase = origin;
       }
+
+      // If there's an invite code, pass it to the dashboard
+      // The dashboard will process it client-side
+      const redirectUrl = invite
+        ? `${redirectBase}${next}?invite=${invite}`
+        : `${redirectBase}${next}`;
+
+      return NextResponse.redirect(redirectUrl);
     }
   }
 
