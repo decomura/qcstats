@@ -1,67 +1,101 @@
-export default function DashboardPage() {
+import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+import DashboardContent from "./DashboardContent";
+
+export default async function DashboardPage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) redirect("/login");
+
+  // Fetch user stats from DB
+  const { data: matchPlayers } = await supabase
+    .from("match_players")
+    .select(`
+      score,
+      total_damage,
+      accuracy_pct,
+      is_winner,
+      healing,
+      mega_health_pickups,
+      heavy_armor_pickups,
+      match_id,
+      player_nick,
+      side,
+      weapon_stats(weapon_name, accuracy_pct, damage, kills)
+    `)
+    .eq("profile_id", user.id);
+
+  // Fetch recent matches
+  const { data: recentMatches } = await supabase
+    .from("matches")
+    .select(`
+      id,
+      map_name,
+      player1_score,
+      player2_score,
+      screenshot_url,
+      match_date,
+      created_at,
+      match_players(player_nick, side, score, is_winner, accuracy_pct, total_damage)
+    `)
+    .eq("uploaded_by", user.id)
+    .order("created_at", { ascending: false })
+    .limit(5);
+
+  // Calculate aggregated stats
+  const playerData = matchPlayers || [];
+  const totalMatches = playerData.length;
+  const wins = playerData.filter((m) => m.is_winner).length;
+  const avgAccuracy =
+    totalMatches > 0
+      ? Math.round(
+          playerData.reduce((sum, m) => sum + (m.accuracy_pct || 0), 0) /
+            totalMatches
+        )
+      : 0;
+
+  // Weapon-specific stats
+  type WeaponRow = { weapon_name: string; accuracy_pct: number; damage: number; kills: number };
+  const allWeapons = playerData.flatMap(
+    (m) => (m.weapon_stats as WeaponRow[]) || []
+  );
+
+  const lgStats = allWeapons.filter((w) => w.weapon_name === "Lightning Gun");
+  const avgLgAccuracy =
+    lgStats.length > 0
+      ? Math.round(
+          lgStats.reduce((sum, w) => sum + w.accuracy_pct, 0) / lgStats.length
+        )
+      : null;
+
+  const railStats = allWeapons.filter((w) => w.weapon_name === "Railgun");
+  const avgRailAccuracy =
+    railStats.length > 0
+      ? Math.round(
+          railStats.reduce((sum, w) => sum + w.accuracy_pct, 0) /
+            railStats.length
+        )
+      : null;
+
+  const stats = {
+    totalMatches,
+    wins,
+    losses: totalMatches - wins,
+    winRate: totalMatches > 0 ? Math.round((wins / totalMatches) * 100) : null,
+    avgAccuracy: avgAccuracy || null,
+    avgLgAccuracy,
+    avgRailAccuracy,
+    totalDamage: playerData.reduce((sum, m) => sum + (m.total_damage || 0), 0),
+  };
+
   return (
-    <div className="container">
-      <div className="glass-panel" style={{ padding: "var(--space-2xl)", marginTop: "var(--space-xl)" }}>
-        <h1 style={{ fontFamily: "var(--font-display)", fontSize: "1.8rem", marginBottom: "var(--space-md)" }}>
-          Dashboard
-        </h1>
-        <p style={{ color: "var(--text-secondary)", fontFamily: "var(--font-heading)" }}>
-          Welcome to QCStats. Upload your first match screenshot to start tracking.
-        </p>
-
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-          gap: "var(--space-lg)",
-          marginTop: "var(--space-xl)"
-        }}>
-          <div className="glass-panel" style={{ padding: "var(--space-lg)", textAlign: "center" }}>
-            <div className="stat-value">0</div>
-            <div className="stat-label">Matches Played</div>
-          </div>
-          <div className="glass-panel" style={{ padding: "var(--space-lg)", textAlign: "center" }}>
-            <div className="stat-value">—</div>
-            <div className="stat-label">Win Rate</div>
-          </div>
-          <div className="glass-panel" style={{ padding: "var(--space-lg)", textAlign: "center" }}>
-            <div className="stat-value">—</div>
-            <div className="stat-label">Avg LG Accuracy</div>
-          </div>
-          <div className="glass-panel" style={{ padding: "var(--space-lg)", textAlign: "center" }}>
-            <div className="stat-value">—</div>
-            <div className="stat-label">Avg Rail Accuracy</div>
-          </div>
-        </div>
-
-        {/* Upload CTA */}
-        <div style={{
-          marginTop: "var(--space-2xl)",
-          padding: "var(--space-2xl)",
-          border: "2px dashed var(--border-medium)",
-          borderRadius: "var(--radius-lg)",
-          textAlign: "center",
-          cursor: "pointer",
-          transition: "border-color 0.25s ease"
-        }}>
-          <div style={{ fontSize: "3rem", marginBottom: "var(--space-md)" }}>📸</div>
-          <p style={{
-            fontFamily: "var(--font-heading)",
-            fontSize: "1.1rem",
-            color: "var(--text-primary)",
-            fontWeight: 600
-          }}>
-            Paste Screenshot (Ctrl+V)
-          </p>
-          <p style={{
-            fontFamily: "var(--font-mono)",
-            fontSize: "0.75rem",
-            color: "var(--text-muted)",
-            marginTop: "var(--space-xs)"
-          }}>
-            or drag & drop your post-match screenshot here
-          </p>
-        </div>
-      </div>
-    </div>
+    <DashboardContent
+      stats={stats}
+      recentMatches={recentMatches || []}
+      userName={user.user_metadata?.preferred_username || user.email?.split("@")[0] || "Player"}
+    />
   );
 }

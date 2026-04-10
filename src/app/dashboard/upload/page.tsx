@@ -8,9 +8,11 @@ import {
   type OCRResult,
   type OCRProgress,
 } from "@/lib/ocr/engine";
+import { saveMatch } from "@/lib/services/matches";
+import { createClient } from "@/lib/supabase/client";
 import styles from "./upload.module.css";
 
-type Stage = "idle" | "preview" | "processing" | "results" | "error";
+type Stage = "idle" | "preview" | "processing" | "results" | "saving" | "saved" | "error";
 
 export default function UploadPage() {
   const [stage, setStage] = useState<Stage>("idle");
@@ -20,6 +22,8 @@ export default function UploadPage() {
   const [result, setResult] = useState<OCRResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [savedMatchId, setSavedMatchId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -118,9 +122,41 @@ export default function UploadPage() {
 
   const handleSave = useCallback(async () => {
     if (!result) return;
-    // TODO: Save to Supabase
-    alert("Save to database – coming soon!");
-  }, [result]);
+    setIsSaving(true);
+    setStage("saving");
+
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setError("You must be logged in to save matches.");
+        setStage("error");
+        return;
+      }
+
+      const saveResult = await saveMatch(result, imageFile, user.id);
+
+      if (saveResult.isDuplicate) {
+        setError("This match already exists in the database. Duplicate detected!");
+        setStage("error");
+        return;
+      }
+
+      if (!saveResult.success) {
+        setError(saveResult.error || "Failed to save match.");
+        setStage("error");
+        return;
+      }
+
+      setSavedMatchId(saveResult.matchId || null);
+      setStage("saved");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Save failed");
+      setStage("error");
+    } finally {
+      setIsSaving(false);
+    }
+  }, [result, imageFile]);
 
   return (
     <div className={styles.uploadPage}>
@@ -279,10 +315,39 @@ export default function UploadPage() {
         </div>
       )}
 
+      {/* ─── Saved ─── */}
+      {stage === "saved" && (
+        <div className={styles.resultsPanel} style={{ marginTop: "2rem", textAlign: "center", padding: "3rem" }}>
+          <span style={{ fontSize: "3rem" }}>🎉</span>
+          <h2 style={{ fontFamily: "var(--font-display)", color: "var(--accent-green)", marginTop: "1rem" }}>
+            MATCH SAVED!
+          </h2>
+          <p style={{ color: "var(--text-secondary)", margin: "1rem 0" }}>
+            Your duel has been recorded in the database.
+          </p>
+          <div className={styles.previewActions} style={{ justifyContent: "center" }}>
+            <button className={styles.btnCancel} onClick={reset}>📸 Upload Another</button>
+            <a href="/dashboard" className={styles.btnSave} style={{ textDecoration: "none", display: "inline-flex", alignItems: "center" }}>
+              📊 Dashboard
+            </a>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Saving ─── */}
+      {stage === "saving" && (
+        <div className={styles.progressContainer}>
+          <div className={styles.progressBar}>
+            <div className={styles.progressFill} style={{ width: "60%" }} />
+          </div>
+          <p className={styles.progressText}>💾 Saving match to database...</p>
+        </div>
+      )}
+
       {/* ─── Error ─── */}
       {stage === "error" && (
         <div className={styles.errorBox}>
-          <h3>⚠️ OCR Error</h3>
+          <h3>⚠️ {error?.includes("Duplicate") ? "Duplicate Match" : "Error"}</h3>
           <p>{error}</p>
           <button className={styles.btnRetry} onClick={reset}>
             ↩ Try Again
