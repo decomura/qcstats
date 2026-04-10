@@ -80,17 +80,17 @@ export interface OCRProgress {
  */
 function preprocessRegion(
   canvas: HTMLCanvasElement,
-  box: BoundingBox
+  box: BoundingBox,
+  regionType: "text" | "number" | "fraction" | "percentage" = "number"
 ): HTMLCanvasElement {
   const regionCanvas = document.createElement("canvas");
-  // Scale up 3x for better OCR on small text
-  const scale = 3;
+  // Text regions (nicks) get 4x upscale, numbers get 3x
+  const scale = regionType === "text" ? 4 : 3;
   regionCanvas.width = box.width * scale;
   regionCanvas.height = box.height * scale;
 
   const ctx = regionCanvas.getContext("2d")!;
 
-  // Use better image smoothing for upscaling
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
 
@@ -107,32 +107,51 @@ function preprocessRegion(
     regionCanvas.height
   );
 
-  // Get pixel data
   const imageData = ctx.getImageData(0, 0, regionCanvas.width, regionCanvas.height);
   const data = imageData.data;
 
-  // Process each pixel
-  for (let i = 0; i < data.length; i += 4) {
-    const r = data[i], g = data[i + 1], b = data[i + 2];
+  if (regionType === "text") {
+    // TEXT MODE (nicks): Softer preprocessing
+    // QC nicks use stylized colored fonts (orange/yellow) on dark background
+    // Extract luminance of the BRIGHTEST channel (preserves colored text better)
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i], g = data[i + 1], b = data[i + 2];
 
-    // Grayscale using luminance formula
-    const gray = r * 0.299 + g * 0.587 + b * 0.114;
+      // Use max channel to preserve colored text (orange = high R+G, low B)
+      const maxChannel = Math.max(r, g, b);
 
-    // Increase contrast more aggressively for QC's dark UI
-    const contrast = 2.2;
-    const factor = (259 * (contrast * 128 + 255)) / (255 * (259 - contrast * 128));
-    let enhanced = factor * (gray - 128) + 128;
-    enhanced = Math.max(0, Math.min(255, enhanced));
+      // Gentle contrast boost
+      const contrast = 1.8;
+      const factor = (259 * (contrast * 128 + 255)) / (255 * (259 - contrast * 128));
+      let enhanced = factor * (maxChannel - 128) + 128;
+      enhanced = Math.max(0, Math.min(255, enhanced));
 
-    // Threshold binarization - QC uses light text on very dark bg
-    // Lower threshold catches more of the white/colored text
-    const threshold = 80;
-    const binarized = enhanced > threshold ? 255 : 0;
+      // Softer threshold for text - preserve more detail
+      const threshold = 100;
+      const binarized = enhanced > threshold ? 255 : 0;
 
-    data[i] = binarized;
-    data[i + 1] = binarized;
-    data[i + 2] = binarized;
-    // Alpha unchanged
+      data[i] = binarized;
+      data[i + 1] = binarized;
+      data[i + 2] = binarized;
+    }
+  } else {
+    // NUMBER MODE: Standard aggressive binarization
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i], g = data[i + 1], b = data[i + 2];
+      const gray = r * 0.299 + g * 0.587 + b * 0.114;
+
+      const contrast = 2.2;
+      const factor = (259 * (contrast * 128 + 255)) / (255 * (259 - contrast * 128));
+      let enhanced = factor * (gray - 128) + 128;
+      enhanced = Math.max(0, Math.min(255, enhanced));
+
+      const threshold = 80;
+      const binarized = enhanced > threshold ? 255 : 0;
+
+      data[i] = binarized;
+      data[i + 1] = binarized;
+      data[i + 2] = binarized;
+    }
   }
 
   ctx.putImageData(imageData, 0, 0);
@@ -204,7 +223,7 @@ async function extractRegionText(
   region: OCRRegion
 ): Promise<string> {
   const scaledBox = scaleBox(region.box, canvas.width, canvas.height);
-  const processedCanvas = preprocessRegion(canvas, scaledBox);
+  const processedCanvas = preprocessRegion(canvas, scaledBox, region.type);
 
   // Configure Tesseract params for this region
   await worker.setParameters({
