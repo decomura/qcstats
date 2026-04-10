@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { User } from "@supabase/supabase-js";
+import { useI18n } from "@/lib/i18n";
 import styles from "./DashboardNav.module.css";
 
 interface Props {
@@ -15,6 +16,7 @@ export default function DashboardNav({ user }: Props) {
   const supabase = createClient();
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { locale, setLocale, t } = useI18n();
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -39,16 +41,19 @@ export default function DashboardNav({ user }: Props) {
         {/* Nav Links */}
         <div className={styles.links}>
           <a href="/dashboard" className={styles.link}>
-            📊 Dashboard
+            📊 {t("nav.dashboard")}
           </a>
           <a href="/dashboard/upload" className={styles.link}>
-            📸 Upload
+            📸 {t("nav.upload")}
           </a>
           <a href="/dashboard/history" className={styles.link}>
-            📋 History
+            📋 {t("nav.history")}
           </a>
           <a href="/dashboard/compare" className={styles.link}>
-            ⚔️ Compare
+            ⚔️ {t("nav.compare")}
+          </a>
+          <a href="/dashboard/friends" className={styles.link}>
+            👥 {t("friends.title")}
           </a>
         </div>
 
@@ -67,15 +72,22 @@ export default function DashboardNav({ user }: Props) {
 
           {menuOpen && (
             <div className={styles.dropdown}>
+              <button
+                onClick={() => setLocale(locale === "en" ? "pl" : "en")}
+                className={styles.dropdownItem}
+                type="button"
+              >
+                🌐 {locale === "en" ? "Polski" : "English"}
+              </button>
               <a href="/dashboard/settings" className={styles.dropdownItem}>
-                ⚙️ Settings
+                ⚙️ {t("nav.settings")}
               </a>
               <button
                 onClick={handleLogout}
                 className={styles.dropdownItem}
                 type="button"
               >
-                🚪 Logout
+                🚪 {t("nav.logout")}
               </button>
             </div>
           )}
@@ -96,12 +108,14 @@ export default function DashboardNav({ user }: Props) {
       {/* Mobile Drawer */}
       {mobileOpen && (
         <div className={styles.mobileDrawer}>
-          <a href="/dashboard" className={styles.mobileLink} onClick={() => setMobileOpen(false)}>📊 Dashboard</a>
-          <a href="/dashboard/upload" className={styles.mobileLink} onClick={() => setMobileOpen(false)}>📸 Upload</a>
-          <a href="/dashboard/history" className={styles.mobileLink} onClick={() => setMobileOpen(false)}>📋 History</a>
-          <a href="/dashboard/compare" className={styles.mobileLink} onClick={() => setMobileOpen(false)}>⚔️ Compare</a>
-          <a href="/dashboard/settings" className={styles.mobileLink} onClick={() => setMobileOpen(false)}>⚙️ Settings</a>
-          <button onClick={handleLogout} className={styles.mobileLink} type="button">🚪 Logout</button>
+          <a href="/dashboard" className={styles.mobileLink} onClick={() => setMobileOpen(false)}>📊 {t("nav.dashboard")}</a>
+          <a href="/dashboard/upload" className={styles.mobileLink} onClick={() => setMobileOpen(false)}>📸 {t("nav.upload")}</a>
+          <a href="/dashboard/history" className={styles.mobileLink} onClick={() => setMobileOpen(false)}>📋 {t("nav.history")}</a>
+          <a href="/dashboard/compare" className={styles.mobileLink} onClick={() => setMobileOpen(false)}>⚔️ {t("nav.compare")}</a>
+          <a href="/dashboard/friends" className={styles.mobileLink} onClick={() => setMobileOpen(false)}>👥 {t("friends.title")}</a>
+          <a href="/dashboard/settings" className={styles.mobileLink} onClick={() => setMobileOpen(false)}>⚙️ {t("nav.settings")}</a>
+          <button onClick={() => { setLocale(locale === "en" ? "pl" : "en"); setMobileOpen(false); }} className={styles.mobileLink} type="button">🌐 {locale === "en" ? "Polski" : "English"}</button>
+          <button onClick={handleLogout} className={styles.mobileLink} type="button">🚪 {t("nav.logout")}</button>
         </div>
       )}
     </nav>

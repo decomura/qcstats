@@ -1,0 +1,353 @@
+.page {
+  padding: 1.5rem 2rem;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.page h1 {
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  color: var(--text-primary);
+  margin-bottom: 1.5rem;
+}
+
+.accent {
+  color: var(--accent-orange);
+}
+
+/* Search */
+.searchBox {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.searchInput {
+  flex: 1;
+  padding: 0.65rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-primary);
+  background: rgba(0, 0, 0, 0.3);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.searchInput:focus {
+  border-color: var(--accent-orange);
+}
+
+.searchBtn {
+  padding: 0.65rem 1rem;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--accent-red), var(--accent-orange));
+  border: none;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.searchBtn:hover:not(:disabled) {
+  transform: scale(1.05);
+}
+
+/* Messages */
+.msg {
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.msgOk {
+  background: rgba(0, 204, 102, 0.1);
+  border: 1px solid rgba(0, 204, 102, 0.3);
+  color: var(--accent-green);
+}
+
+.msgErr {
+  background: rgba(204, 0, 0, 0.1);
+  border: 1px solid rgba(204, 0, 0, 0.3);
+  color: var(--accent-red);
+}
+
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border-primary);
+  padding-bottom: 0;
+}
+
+.tab {
+  padding: 0.6rem 1.2rem;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: all 0.2s;
+}
+
+.tab:hover {
+  color: var(--text-primary);
+}
+
+.tabActive {
+  color: var(--accent-orange);
+  border-bottom-color: var(--accent-orange);
+}
+
+/* Section */
+.section {
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: 12px;
+  padding: 1rem;
+  backdrop-filter: blur(12px);
+}
+
+.section h3 {
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.section h3:first-child {
+  margin-top: 0;
+}
+
+.empty {
+  text-align: center;
+  padding: 2rem;
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+/* Friend Row */
+.friendRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 0.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.friendRow:last-child {
+  border-bottom: none;
+}
+
+.friendAvatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent-red), var(--accent-orange));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: white;
+  flex-shrink: 0;
+}
+
+.friendInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.friendName {
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.friendName:hover {
+  color: var(--accent-orange);
+}
+
+.friendUsername {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+/* Action Buttons */
+.actionBtn {
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  background: linear-gradient(135deg, var(--accent-red), var(--accent-orange));
+  border: none;
+  color: white;
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: transform 0.1s;
+  white-space: nowrap;
+}
+
+.actionBtn:hover {
+  transform: scale(1.03);
+}
+
+.rowActions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.acceptBtn {
+  padding: 0.35rem 0.7rem;
+  border-radius: 6px;
+  background: rgba(0, 204, 102, 0.2);
+  border: 1px solid rgba(0, 204, 102, 0.4);
+  color: var(--accent-green);
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.acceptBtn:hover {
+  background: rgba(0, 204, 102, 0.35);
+}
+
+.declineBtn {
+  padding: 0.35rem 0.7rem;
+  border-radius: 6px;
+  background: rgba(204, 0, 0, 0.2);
+  border: 1px solid rgba(204, 0, 0, 0.4);
+  color: var(--accent-red);
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.declineBtn:hover {
+  background: rgba(204, 0, 0, 0.35);
+}
+
+.removeBtn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: none;
+  border: 1px solid rgba(204, 0, 0, 0.3);
+  color: var(--accent-red);
+  font-size: 0.8rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.removeBtn:hover {
+  background: rgba(204, 0, 0, 0.2);
+}
+
+.pendingBadge {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  padding: 0.25rem 0.6rem;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* Notifications */
+.markReadBtn {
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-primary);
+  color: var(--text-secondary);
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  cursor: pointer;
+  margin-bottom: 0.75rem;
+  transition: all 0.2s;
+}
+
+.markReadBtn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+.notifRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.65rem 0.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.notifRow:last-child {
+  border-bottom: none;
+}
+
+.notifIcon {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.notifContent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.notifTitle {
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  color: var(--text-primary);
+}
+
+.notifBody {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.notifTime {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-muted);
+}
+
+@media (max-width: 768px) {
+  .page {
+    padding: 1rem;
+  }
+
+  .friendRow {
+    flex-wrap: wrap;
+  }
+
+  .rowActions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}

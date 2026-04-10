@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import DashboardNav from "@/components/DashboardNav";
+import Providers from "@/components/Providers";
 
 export default async function DashboardLayout({
   children,
@@ -17,9 +18,11 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="dashboard-layout">
-      <DashboardNav user={user} />
-      <main className="dashboard-main">{children}</main>
-    </div>
+    <Providers>
+      <div className="dashboard-layout">
+        <DashboardNav user={user} />
+        <main className="dashboard-main">{children}</main>
+      </div>
+    </Providers>
   );
 }
