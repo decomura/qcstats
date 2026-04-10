@@ -84,8 +84,9 @@ function preprocessRegion(
   regionType: "text" | "number" | "fraction" | "percentage" = "number"
 ): HTMLCanvasElement {
   // Step 1: Crop and upscale the region
-  const scale = 4;
-  const PAD = 16; // padding pixels around the text (helps Tesseract)
+  // 3x scale (not 4x) — prevents characters from becoming too thick/bold
+  const scale = 3;
+  const PAD = 12; // padding pixels around the text (helps Tesseract)
   const cropW = box.width * scale;
   const cropH = box.height * scale;
 
@@ -119,8 +120,13 @@ function preprocessRegion(
   const imageData = ctx.getImageData(0, 0, regionCanvas.width, regionCanvas.height);
   const data = imageData.data;
 
-  const threshold = regionType === "text" ? 120 : 130;
-  const contrast = regionType === "text" ? 1.5 : 1.6;
+  // Very gentle contrast (0.5) to avoid thickening characters
+  // Higher threshold = more selective = thinner characters
+  const threshold = regionType === "text" ? 115 : 125;
+  const contrast = 0.5;
+
+  // Pre-compute contrast factor (formula from Photoshop-style contrast)
+  const factor = (259 * (contrast * 128 + 255)) / (255 * (259 - contrast * 128));
 
   for (let i = 0; i < data.length; i += 4) {
     const r = data[i], g = data[i + 1], b = data[i + 2];
@@ -128,13 +134,11 @@ function preprocessRegion(
     // Max channel: preserves ANY brightly-colored text on dark background
     const maxChannel = Math.max(r, g, b);
 
-    // Contrast enhancement
-    const factor = (259 * (contrast * 128 + 255)) / (255 * (259 - contrast * 128));
+    // Gentle contrast enhancement
     let enhanced = factor * (maxChannel - 128) + 128;
     enhanced = Math.max(0, Math.min(255, enhanced));
 
     // INVERTED binarization: text → BLACK (0), background → WHITE (255)
-    // Tesseract works best with dark text on light background
     const binarized = enhanced > threshold ? 0 : 255;
 
     data[i] = binarized;
