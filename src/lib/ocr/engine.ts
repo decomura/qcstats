@@ -83,12 +83,16 @@ function preprocessRegion(
   box: BoundingBox
 ): HTMLCanvasElement {
   const regionCanvas = document.createElement("canvas");
-  // Scale up 2x for better OCR
-  const scale = 2;
+  // Scale up 3x for better OCR on small text
+  const scale = 3;
   regionCanvas.width = box.width * scale;
   regionCanvas.height = box.height * scale;
 
   const ctx = regionCanvas.getContext("2d")!;
+
+  // Use better image smoothing for upscaling
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
 
   // Draw the cropped region scaled up
   ctx.drawImage(
@@ -109,17 +113,20 @@ function preprocessRegion(
 
   // Process each pixel
   for (let i = 0; i < data.length; i += 4) {
-    // Grayscale using luminance formula
-    const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+    const r = data[i], g = data[i + 1], b = data[i + 2];
 
-    // Increase contrast
-    const contrast = 1.8;
+    // Grayscale using luminance formula
+    const gray = r * 0.299 + g * 0.587 + b * 0.114;
+
+    // Increase contrast more aggressively for QC's dark UI
+    const contrast = 2.2;
     const factor = (259 * (contrast * 128 + 255)) / (255 * (259 - contrast * 128));
     let enhanced = factor * (gray - 128) + 128;
     enhanced = Math.max(0, Math.min(255, enhanced));
 
-    // Threshold binarization - text is usually light on dark bg
-    const threshold = 100;
+    // Threshold binarization - QC uses light text on very dark bg
+    // Lower threshold catches more of the white/colored text
+    const threshold = 80;
     const binarized = enhanced > threshold ? 255 : 0;
 
     data[i] = binarized;
