@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
-import RegionCanvas, { type RegionDef } from "./RegionCanvas";
+import RegionCanvas, { type RegionDef, type RegionCanvasHandle } from "./RegionCanvas";
 import RegionList from "./RegionList";
 import { ALL_REGIONS, type BoundingBox } from "@/lib/ocr/regions";
+import { testSingleRegion } from "@/lib/ocr/engine";
 import styles from "./calibrate.module.css";
 
 // Color mapping for region groups
@@ -37,6 +38,16 @@ function getRegionGroup(name: string): string {
   if (name.startsWith("p1_")) return "summary_p1";
   if (name.startsWith("p2_")) return "summary_p2";
   return "other";
+}
+
+// Get the region type from ALL_REGIONS
+function getRegionType(name: string): "text" | "number" | "fraction" | "percentage" {
+  const r = ALL_REGIONS.find((reg) => reg.name === name);
+  return r?.type || "number";
+}
+function getRegionWhitelist(name: string): string | undefined {
+  const r = ALL_REGIONS.find((reg) => reg.name === name);
+  return r?.whitelist;
 }
 
 // Convert ALL_REGIONS to editable RegionDef array
@@ -90,7 +101,7 @@ function saveScreenshot(variant: string, dataUrl: string) {
     const existing = JSON.parse(localStorage.getItem(SCREENSHOTS_KEY) || "{}");
     existing[variant] = dataUrl;
     localStorage.setItem(SCREENSHOTS_KEY, JSON.stringify(existing));
-  } catch { /* ignore - might exceed quota */ }
+  } catch { /* ignore */ }
 }
 
 function loadScreenshot(variant: string): string | null {
@@ -119,6 +130,13 @@ function fileToDataUrl(file: File): Promise<string> {
   });
 }
 
+// OCR test result type
+interface TestResult {
+  name: string;
+  text: string;
+  previewUrl: string;
+}
+
 export default function CalibrateContent() {
   const [variant, setVariant] = useState("total_score");
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -128,7 +146,12 @@ export default function CalibrateContent() {
   });
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
   const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
+  const [testResult, setTestResult] = useState<TestResult | null>(null);
+  const [isTesting, setIsTesting] = useState(false);
+  const [testAllResults, setTestAllResults] = useState<TestResult[] | null>(null);
+  const [isTestingAll, setIsTestingAll] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const canvasRef = useRef<RegionCanvasHandle>(null);
 
   // Load saved screenshot on mount and variant change
   useEffect(() => {
@@ -150,7 +173,6 @@ export default function CalibrateContent() {
     try {
       const dataUrl = await fileToDataUrl(file);
       setImageUrl(dataUrl);
-      // Auto-save screenshot for this variant
       saveScreenshot(variant, dataUrl);
       showToast("success", `📸 Screenshot zapisany dla "${variant}"`);
     } catch {
@@ -206,12 +228,81 @@ export default function CalibrateContent() {
     setVariant(newVariant);
     const saved = loadSavedRegions(newVariant);
     setRegions(saved || buildRegionDefs());
-    // Image will be loaded by the useEffect above
   }, []);
 
   const handleImageLoad = useCallback((w: number, h: number) => {
     setImageSize({ w, h });
   }, []);
+
+  // ─── Test OCR for selected region ───
+  const handleTestRegion = useCallback(async () => {
+    if (!selectedRegion || !imageUrl) return;
+    const imgEl = canvasRef.current?.getImageElement();
+    if (!imgEl) {
+      showToast("error", "Obraz nie załadowany");
+      return;
+    }
+    const region = regions.find((r) => r.name === selectedRegion);
+    if (!region) return;
+
+    setIsTesting(true);
+    try {
+      const result = await testSingleRegion(
+        imgEl,
+        region.box,
+        getRegionType(region.name),
+        getRegionWhitelist(region.name)
+      );
+      setTestResult({
+        name: region.name,
+        text: result.text,
+        previewUrl: result.previewUrl,
+      });
+    } catch (err) {
+      showToast("error", `OCR error: ${err instanceof Error ? err.message : "unknown"}`);
+    } finally {
+      setIsTesting(false);
+    }
+  }, [selectedRegion, imageUrl, regions, showToast]);
+
+  // ─── Test ALL regions ───
+  const handleTestAll = useCallback(async () => {
+    if (!imageUrl) return;
+    const imgEl = canvasRef.current?.getImageElement();
+    if (!imgEl) return;
+
+    setIsTestingAll(true);
+    setTestAllResults([]);
+    const results: TestResult[] = [];
+
+    // Only test summary + items + nicks (skip weapons for speed)
+    const importantRegions = regions.filter(
+      (r) => !r.name.includes("_w") || r.name.includes("_w0_") // only first weapon for reference
+    );
+
+    for (const region of importantRegions) {
+      try {
+        const result = await testSingleRegion(
+          imgEl,
+          region.box,
+          getRegionType(region.name),
+          getRegionWhitelist(region.name)
+        );
+        results.push({
+          name: region.name,
+          text: result.text,
+          previewUrl: result.previewUrl,
+        });
+        setTestAllResults([...results]);
+      } catch {
+        results.push({ name: region.name, text: "ERROR", previewUrl: "" });
+        setTestAllResults([...results]);
+      }
+    }
+
+    setIsTestingAll(false);
+    showToast("success", `🔬 Przetestowano ${results.length} regionów`);
+  }, [imageUrl, regions, showToast]);
 
   return (
     <div className={styles.calibratePage}>
@@ -248,12 +339,31 @@ export default function CalibrateContent() {
         <div className={styles.spacer} />
 
         {imageUrl && (
+          <>
+            <button
+              className={styles.toolbarBtnTest}
+              onClick={handleTestRegion}
+              disabled={!selectedRegion || isTesting}
+            >
+              {isTesting ? "⏳..." : "🔬 Test OCR"}
+            </button>
+            <button
+              className={styles.toolbarBtnTest}
+              onClick={handleTestAll}
+              disabled={isTestingAll}
+            >
+              {isTestingAll ? "⏳ Testowanie..." : "🔬 Test ALL"}
+            </button>
+          </>
+        )}
+
+        {imageUrl && (
           <button className={styles.toolbarBtn} onClick={handleRemoveScreenshot}>
-            🗑️ Usuń screenshot
+            🗑️ Usuń
           </button>
         )}
         <button className={styles.toolbarBtn} onClick={() => fileRef.current?.click()}>
-          📸 {imageUrl ? "Zmień" : "Wrzuć"} screenshot
+          📸 {imageUrl ? "Zmień" : "Wrzuć"}
         </button>
         <input
           ref={fileRef}
@@ -269,7 +379,7 @@ export default function CalibrateContent() {
           🔄 Reset
         </button>
         <button className={styles.toolbarBtn} onClick={handleExport}>
-          📥 Export JSON
+          📥 JSON
         </button>
         <button className={styles.toolbarBtnPrimary} onClick={handleSave}>
           💾 SAVE
@@ -299,6 +409,7 @@ export default function CalibrateContent() {
           ) : (
             <div className={styles.canvasWrapper}>
               <RegionCanvas
+                ref={canvasRef}
                 imageUrl={imageUrl}
                 regions={regions}
                 selectedRegion={selectedRegion}
@@ -316,6 +427,54 @@ export default function CalibrateContent() {
                   : "Kliknij region żeby go wybrać i przesuń"}
               </span>
               <span>Ref: 1024×576 | {variant === "total_score" ? "ŁĄCZNY WYNIK" : "RANKING"}</span>
+            </div>
+          )}
+
+          {/* ─── Single Test Result ─── */}
+          {testResult && (
+            <div className={styles.testResultPanel}>
+              <div className={styles.testResultHeader}>
+                <strong>🔬 OCR Test: {testResult.name}</strong>
+                <button onClick={() => setTestResult(null)}>✕</button>
+              </div>
+              <div className={styles.testResultBody}>
+                <div className={styles.testResultPreview}>
+                  <span className={styles.testLabel}>Obraz po preprocessingu:</span>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={testResult.previewUrl} alt="preprocessed" />
+                </div>
+                <div className={styles.testResultText}>
+                  <span className={styles.testLabel}>Odczytany tekst:</span>
+                  <span className={styles.testValue}>{testResult.text || "(pusty)"}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ─── Test All Results ─── */}
+          {testAllResults && testAllResults.length > 0 && (
+            <div className={styles.testAllPanel}>
+              <div className={styles.testResultHeader}>
+                <strong>🔬 Wyniki OCR ({testAllResults.length} regionów)</strong>
+                <button onClick={() => setTestAllResults(null)}>✕</button>
+              </div>
+              <div className={styles.testAllGrid}>
+                {testAllResults.map((r) => (
+                  <div
+                    key={r.name}
+                    className={styles.testAllItem}
+                    onClick={() => {
+                      setSelectedRegion(r.name);
+                      setTestResult(r);
+                    }}
+                  >
+                    <span className={styles.testAllName}>{r.name}</span>
+                    <span className={styles.testAllValue}>
+                      {r.text || "–"}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>

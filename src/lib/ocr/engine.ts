@@ -443,3 +443,40 @@ export async function terminateOCR(): Promise<void> {
     workerInstance = null;
   }
 }
+
+/**
+ * Test OCR on a single region – used by the calibrator for real-time feedback.
+ * Returns the raw text and a data URL of the preprocessed image.
+ */
+export async function testSingleRegion(
+  imageElement: HTMLImageElement,
+  box: BoundingBox,
+  regionType: "text" | "number" | "fraction" | "percentage" = "number",
+  whitelist?: string
+): Promise<{ text: string; previewUrl: string }> {
+  // Draw image to canvas
+  const canvas = document.createElement("canvas");
+  canvas.width = imageElement.naturalWidth;
+  canvas.height = imageElement.naturalHeight;
+  const ctx = canvas.getContext("2d")!;
+  ctx.drawImage(imageElement, 0, 0);
+
+  // Scale box from reference to actual resolution
+  const scaledBox = scaleBox(box, canvas.width, canvas.height);
+
+  // Preprocess
+  const processed = preprocessRegion(canvas, scaledBox, regionType);
+
+  // Get preview data URL
+  const previewUrl = processed.toDataURL("image/png");
+
+  // Run OCR
+  const worker = await getWorker();
+  await worker.setParameters({
+    tessedit_char_whitelist: whitelist || "",
+    tessedit_pageseg_mode: "7" as never, // PSM.SINGLE_LINE
+  });
+  const { data: { text } } = await worker.recognize(processed);
+
+  return { text: text.trim(), previewUrl };
+}

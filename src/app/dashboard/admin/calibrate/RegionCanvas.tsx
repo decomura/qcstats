@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useState, useCallback } from "react";
+import { useRef, useEffect, useState, useCallback, useImperativeHandle, forwardRef } from "react";
 import type { BoundingBox } from "@/lib/ocr/regions";
 
 export interface RegionDef {
@@ -23,14 +23,18 @@ type DragMode = "move" | "resize-nw" | "resize-ne" | "resize-sw" | "resize-se" |
 
 const HANDLE_SIZE = 6;
 
-export default function RegionCanvas({
+export interface RegionCanvasHandle {
+  getImageElement: () => HTMLImageElement | null;
+}
+
+const RegionCanvas = forwardRef<RegionCanvasHandle, Props>(function RegionCanvas({
   imageUrl,
   regions,
   selectedRegion,
   onSelectRegion,
   onUpdateRegion,
   onImageLoad,
-}: Props) {
+}, ref) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
   const [canvasSize, setCanvasSize] = useState({ w: 1024, h: 576 });
@@ -41,6 +45,11 @@ export default function RegionCanvas({
     startY: number;
     origBox: BoundingBox;
   } | null>(null);
+
+  // Expose image element to parent
+  useImperativeHandle(ref, () => ({
+    getImageElement: () => imgRef.current,
+  }));
 
   // Scale factor from reference (1024x576) to canvas display size
   const scaleRef = useRef({ x: 1, y: 1 });
@@ -321,4 +330,6 @@ export default function RegionCanvas({
       style={{ display: "block", width: "100%", height: "auto" }}
     />
   );
-}
+});
+
+export default RegionCanvas;
