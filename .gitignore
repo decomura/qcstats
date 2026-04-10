@@ -36,6 +36,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# google oauth credentials
+client_secret_*.json
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
