@@ -84,8 +84,8 @@ function preprocessRegion(
   regionType: "text" | "number" | "fraction" | "percentage" = "number"
 ): HTMLCanvasElement {
   const regionCanvas = document.createElement("canvas");
-  // Text regions (nicks) get 4x upscale, numbers get 3x
-  const scale = regionType === "text" ? 4 : 3;
+  // All regions get 4x upscale for maximum clarity
+  const scale = 4;
   regionCanvas.width = box.width * scale;
   regionCanvas.height = box.height * scale;
 
@@ -110,48 +110,30 @@ function preprocessRegion(
   const imageData = ctx.getImageData(0, 0, regionCanvas.width, regionCanvas.height);
   const data = imageData.data;
 
-  if (regionType === "text") {
-    // TEXT MODE (nicks): Softer preprocessing
-    // QC nicks use stylized colored fonts (orange/yellow) on dark background
-    // Extract luminance of the BRIGHTEST channel (preserves colored text better)
-    for (let i = 0; i < data.length; i += 4) {
-      const r = data[i], g = data[i + 1], b = data[i + 2];
+  // Unified approach: Use max(R,G,B) for ALL region types
+  // This preserves colored text (green items, orange stats, white numbers)
+  // much better than grayscale luminance which kills green/orange channels.
+  // Only the threshold differs per type.
+  const threshold = regionType === "text" ? 90 : 70;
+  const contrast = regionType === "text" ? 1.8 : 2.0;
 
-      // Use max channel to preserve colored text (orange = high R+G, low B)
-      const maxChannel = Math.max(r, g, b);
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i], g = data[i + 1], b = data[i + 2];
 
-      // Gentle contrast boost
-      const contrast = 1.8;
-      const factor = (259 * (contrast * 128 + 255)) / (255 * (259 - contrast * 128));
-      let enhanced = factor * (maxChannel - 128) + 128;
-      enhanced = Math.max(0, Math.min(255, enhanced));
+    // Max channel: preserves ANY brightly-colored text on dark background
+    const maxChannel = Math.max(r, g, b);
 
-      // Softer threshold for text - preserve more detail
-      const threshold = 100;
-      const binarized = enhanced > threshold ? 255 : 0;
+    // Contrast enhancement
+    const factor = (259 * (contrast * 128 + 255)) / (255 * (259 - contrast * 128));
+    let enhanced = factor * (maxChannel - 128) + 128;
+    enhanced = Math.max(0, Math.min(255, enhanced));
 
-      data[i] = binarized;
-      data[i + 1] = binarized;
-      data[i + 2] = binarized;
-    }
-  } else {
-    // NUMBER MODE: Standard aggressive binarization
-    for (let i = 0; i < data.length; i += 4) {
-      const r = data[i], g = data[i + 1], b = data[i + 2];
-      const gray = r * 0.299 + g * 0.587 + b * 0.114;
+    // Binarize: text above threshold → white, background → black
+    const binarized = enhanced > threshold ? 255 : 0;
 
-      const contrast = 2.2;
-      const factor = (259 * (contrast * 128 + 255)) / (255 * (259 - contrast * 128));
-      let enhanced = factor * (gray - 128) + 128;
-      enhanced = Math.max(0, Math.min(255, enhanced));
-
-      const threshold = 80;
-      const binarized = enhanced > threshold ? 255 : 0;
-
-      data[i] = binarized;
-      data[i + 1] = binarized;
-      data[i + 2] = binarized;
-    }
+    data[i] = binarized;
+    data[i + 1] = binarized;
+    data[i + 2] = binarized;
   }
 
   ctx.putImageData(imageData, 0, 0);

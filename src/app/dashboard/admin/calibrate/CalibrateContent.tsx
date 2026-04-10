@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import RegionCanvas, { type RegionDef } from "./RegionCanvas";
 import RegionList from "./RegionList";
 import { ALL_REGIONS, type BoundingBox } from "@/lib/ocr/regions";
@@ -49,12 +49,13 @@ function buildRegionDefs(): RegionDef[] {
   }));
 }
 
-// Local storage key for saved calibrations
-const STORAGE_KEY = "qcstats_ocr_calibration";
+// ─── Storage keys ───
+const CALIBRATION_KEY = "qcstats_ocr_calibration";
+const SCREENSHOTS_KEY = "qcstats_ocr_screenshots";
 
 function loadSavedRegions(variant: string): RegionDef[] | null {
   try {
-    const saved = localStorage.getItem(STORAGE_KEY);
+    const saved = localStorage.getItem(CALIBRATION_KEY);
     if (!saved) return null;
     const data = JSON.parse(saved);
     if (data[variant]) {
@@ -73,14 +74,49 @@ function loadSavedRegions(variant: string): RegionDef[] | null {
 
 function saveRegions(variant: string, regions: RegionDef[]) {
   try {
-    const existing = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+    const existing = JSON.parse(localStorage.getItem(CALIBRATION_KEY) || "{}");
     const boxes: Record<string, BoundingBox> = {};
     for (const r of regions) {
       boxes[r.name] = r.box;
     }
     existing[variant] = boxes;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(existing));
+    localStorage.setItem(CALIBRATION_KEY, JSON.stringify(existing));
   } catch { /* ignore */ }
+}
+
+// ─── Screenshot persistence ───
+function saveScreenshot(variant: string, dataUrl: string) {
+  try {
+    const existing = JSON.parse(localStorage.getItem(SCREENSHOTS_KEY) || "{}");
+    existing[variant] = dataUrl;
+    localStorage.setItem(SCREENSHOTS_KEY, JSON.stringify(existing));
+  } catch { /* ignore - might exceed quota */ }
+}
+
+function loadScreenshot(variant: string): string | null {
+  try {
+    const saved = localStorage.getItem(SCREENSHOTS_KEY);
+    if (!saved) return null;
+    const data = JSON.parse(saved);
+    return data[variant] || null;
+  } catch { return null; }
+}
+
+function removeScreenshot(variant: string) {
+  try {
+    const existing = JSON.parse(localStorage.getItem(SCREENSHOTS_KEY) || "{}");
+    delete existing[variant];
+    localStorage.setItem(SCREENSHOTS_KEY, JSON.stringify(existing));
+  } catch { /* ignore */ }
+}
+
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 }
 
 export default function CalibrateContent() {
@@ -94,16 +130,33 @@ export default function CalibrateContent() {
   const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  // Load saved screenshot on mount and variant change
+  useEffect(() => {
+    const savedScreenshot = loadScreenshot(variant);
+    if (savedScreenshot) {
+      setImageUrl(savedScreenshot);
+    } else {
+      setImageUrl(null);
+    }
+  }, [variant]);
+
   const showToast = useCallback((type: "success" | "error", msg: string) => {
     setToast({ type, msg });
     setTimeout(() => setToast(null), 3000);
   }, []);
 
-  const handleFile = useCallback((file: File) => {
+  const handleFile = useCallback(async (file: File) => {
     if (!file.type.startsWith("image/")) return;
-    if (imageUrl) URL.revokeObjectURL(imageUrl);
-    setImageUrl(URL.createObjectURL(file));
-  }, [imageUrl]);
+    try {
+      const dataUrl = await fileToDataUrl(file);
+      setImageUrl(dataUrl);
+      // Auto-save screenshot for this variant
+      saveScreenshot(variant, dataUrl);
+      showToast("success", `📸 Screenshot zapisany dla "${variant}"`);
+    } catch {
+      showToast("error", "Nie udało się załadować obrazu");
+    }
+  }, [variant, showToast]);
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
@@ -113,6 +166,13 @@ export default function CalibrateContent() {
     },
     [handleFile]
   );
+
+  const handleRemoveScreenshot = useCallback(() => {
+    removeScreenshot(variant);
+    setImageUrl(null);
+    setImageSize(null);
+    showToast("success", "🗑️ Screenshot usunięty");
+  }, [variant, showToast]);
 
   const handleUpdateRegion = useCallback((name: string, box: BoundingBox) => {
     setRegions((prev) =>
@@ -146,6 +206,7 @@ export default function CalibrateContent() {
     setVariant(newVariant);
     const saved = loadSavedRegions(newVariant);
     setRegions(saved || buildRegionDefs());
+    // Image will be loaded by the useEffect above
   }, []);
 
   const handleImageLoad = useCallback((w: number, h: number) => {
@@ -186,6 +247,24 @@ export default function CalibrateContent() {
 
         <div className={styles.spacer} />
 
+        {imageUrl && (
+          <button className={styles.toolbarBtn} onClick={handleRemoveScreenshot}>
+            🗑️ Usuń screenshot
+          </button>
+        )}
+        <button className={styles.toolbarBtn} onClick={() => fileRef.current?.click()}>
+          📸 {imageUrl ? "Zmień" : "Wrzuć"} screenshot
+        </button>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          style={{ display: "none" }}
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) handleFile(f);
+          }}
+        />
         <button className={styles.toolbarBtn} onClick={handleReset}>
           🔄 Reset
         </button>
@@ -213,16 +292,9 @@ export default function CalibrateContent() {
               <span className={styles.dropHint}>
                 Drag & Drop lub kliknij • 16:9 format
               </span>
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/*"
-                style={{ display: "none" }}
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) handleFile(f);
-                }}
-              />
+              <span className={styles.dropHint}>
+                Screenshot będzie zapamiętany dla wariantu: <strong>{variant === "total_score" ? "ŁĄCZNY WYNIK" : "RANKING"}</strong>
+              </span>
             </div>
           ) : (
             <div className={styles.canvasWrapper}>
@@ -240,10 +312,10 @@ export default function CalibrateContent() {
             <div className={styles.canvasInfo}>
               <span>
                 {selectedRegion
-                  ? `Selected: ${selectedRegion} (${regions.find((r) => r.name === selectedRegion)?.box.x}, ${regions.find((r) => r.name === selectedRegion)?.box.y})`
+                  ? `Selected: ${selectedRegion} (${regions.find((r) => r.name === selectedRegion)?.box.x}, ${regions.find((r) => r.name === selectedRegion)?.box.y} ${regions.find((r) => r.name === selectedRegion)?.box.width}×${regions.find((r) => r.name === selectedRegion)?.box.height})`
                   : "Kliknij region żeby go wybrać i przesuń"}
               </span>
-              <span>Ref: 1024×576</span>
+              <span>Ref: 1024×576 | {variant === "total_score" ? "ŁĄCZNY WYNIK" : "RANKING"}</span>
             </div>
           )}
         </div>
