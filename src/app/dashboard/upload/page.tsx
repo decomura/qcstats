@@ -731,6 +731,9 @@ function PlayerCard({
 }: {
   player: OCRResult["player1"];
 }) {
+  const weaponIcon = (name: string) =>
+    `/img/${name.toLowerCase().replace(/ /g, "_").replace("lightning", "lighting")}.png`;
+
   return (
     <div className={styles.playerCard}>
       <div className={styles.playerHeader}>
@@ -742,7 +745,7 @@ function PlayerCard({
       </div>
 
       <div className={styles.statRow}>
-        <span className={styles.statLabel}>Damage</span>
+        <span className={styles.statLabel}>⚔️ Damage</span>
         <input
           className={styles.statValueEditable}
           defaultValue={player.totalDamage}
@@ -750,35 +753,46 @@ function PlayerCard({
         />
       </div>
       <div className={styles.statRow}>
-        <span className={styles.statLabel}>Accuracy</span>
+        <span className={styles.statLabel}>🎯 Accuracy</span>
         <span className={styles.statValue}>{player.accuracyPct}%</span>
       </div>
       <div className={styles.statRow}>
-        <span className={styles.statLabel}>Hits/Shots</span>
+        <span className={styles.statLabel}>💥 Hits/Shots</span>
         <span className={styles.statValue}>{player.hitsShots || "—"}</span>
       </div>
-      <div className={styles.statRow}>
-        <span className={styles.statLabel}>Healing</span>
+
+      {/* Pickups with icons */}
+      <div className={styles.pickupStats}>
+        <span className={styles.statLabel}>🩺 Healing</span>
         <span className={styles.statValue}>{player.healing}</span>
       </div>
-      <div className={styles.statRow}>
-        <span className={styles.statLabel}>Mega HP</span>
+      <div className={styles.pickupStats}>
+        <span className={styles.pickupStatLabel}>
+          <img src="/img/mega_health.png" alt="MH" className={styles.pickupStatIcon} />
+          Mega HP
+        </span>
         <span className={styles.statValue}>{player.megaHealthPickups}</span>
       </div>
-      <div className={styles.statRow}>
-        <span className={styles.statLabel}>Heavy Armor</span>
+      <div className={styles.pickupStats}>
+        <span className={styles.pickupStatLabel}>
+          <img src="/img/heavy_armor.png" alt="HA" className={styles.pickupStatIcon} />
+          Heavy Armor
+        </span>
         <span className={styles.statValue}>{player.heavyArmorPickups}</span>
       </div>
-      <div className={styles.statRow}>
-        <span className={styles.statLabel}>Light Armor</span>
+      <div className={styles.pickupStats}>
+        <span className={styles.pickupStatLabel}>
+          <img src="/img/light_armor.png" alt="LA" className={styles.pickupStatIcon} />
+          Light Armor
+        </span>
         <span className={styles.statValue}>{player.lightArmorPickups}</span>
       </div>
 
-      {/* Weapons */}
+      {/* Weapons with icons */}
       <div className={styles.weaponsSection}>
         <h4>Arsenal</h4>
         <div className={styles.weaponRow}>
-          <span className={styles.weaponHeader}>Weapon</span>
+          <span className={styles.weaponHeader} style={{ minWidth: "120px" }}>Weapon</span>
           <span className={styles.weaponHeader}>H/S</span>
           <span className={styles.weaponHeader}>Acc%</span>
           <span className={styles.weaponHeader}>Dmg</span>
@@ -786,7 +800,15 @@ function PlayerCard({
         </div>
         {player.weapons.map((w) => (
           <div key={w.weaponIndex} className={styles.weaponRow}>
-            <span className={styles.weaponName}>{w.weaponName}</span>
+            <span className={styles.weaponName} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <img
+                src={weaponIcon(w.weaponName)}
+                alt={w.weaponName}
+                style={{ width: "20px", height: "20px", objectFit: "contain", filter: "drop-shadow(0 0 2px rgba(255,107,0,0.3))" }}
+                onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+              />
+              {w.weaponName}
+            </span>
             <span className={styles.weaponStat}>{w.hitsShots || "—"}</span>
             <span className={styles.weaponStat}>
               {w.accuracyPct > 0 ? `${w.accuracyPct}%` : "—"}

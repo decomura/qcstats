@@ -25,12 +25,25 @@ export interface WallPost {
   uploader_avatar: string | null;
   match_group_id: string | null;
   players: {
+    id: string;
     player_nick: string;
     side: number;
     total_damage: number;
     accuracy_pct: number;
+    hits_shots: string | null;
     kills: number;
     is_winner: boolean;
+    healing: number;
+    mega_health_pickups: number;
+    heavy_armor_pickups: number;
+    light_armor_pickups: number;
+    weapon_stats: {
+      weapon_name: string;
+      accuracy_pct: number;
+      damage: number;
+      kills: number;
+      hits_shots: string | null;
+    }[];
   }[];
   comments: WallComment[];
   reactions: ReactionCount[];
@@ -91,7 +104,21 @@ export async function fetchWallPosts(
       uploaded_by,
       match_group_id,
       profiles:uploaded_by(username, avatar_url),
-      match_players(player_nick, side, total_damage, accuracy_pct, kills, is_winner)
+      match_players(
+        id,
+        player_nick,
+        side,
+        total_damage,
+        accuracy_pct,
+        hits_shots,
+        kills,
+        is_winner,
+        healing,
+        mega_health_pickups,
+        heavy_armor_pickups,
+        light_armor_pickups,
+        weapon_stats(weapon_name, accuracy_pct, damage, kills, hits_shots)
+      )
     `)
     .eq("is_public", true)
     .order("created_at", { ascending: false })

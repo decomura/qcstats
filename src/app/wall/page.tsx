@@ -80,6 +80,63 @@ export default function PublicWallPage() {
     const p1 = post.players.find((p) => p.side === 1);
     const p2 = post.players.find((p) => p.side === 2);
 
+    const renderPlayerWeapons = (player: typeof p1) => {
+      if (!player?.weapon_stats?.length) return null;
+      const sorted = [...player.weapon_stats]
+        .filter(w => w.damage > 0 || w.kills > 0)
+        .sort((a, b) => b.damage - a.damage);
+      if (sorted.length === 0) return null;
+
+      return (
+        <div className={styles.weaponList}>
+          {sorted.slice(0, 5).map((w, i) => (
+            <div key={i} className={styles.weaponItem} title={w.weapon_name}>
+              <img
+                src={`/img/${w.weapon_name.toLowerCase().replace(/ /g, "_").replace("lightning", "lighting")}.png`}
+                alt={w.weapon_name}
+                className={styles.weaponIcon}
+                onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+              />
+              <span className={styles.weaponAcc}>{w.accuracy_pct > 0 ? `${w.accuracy_pct}%` : ""}</span>
+              <span className={styles.weaponDmg}>{w.damage > 0 ? w.damage : ""}</span>
+              <span className={styles.weaponKills}>{w.kills > 0 ? `${w.kills}K` : ""}</span>
+            </div>
+          ))}
+        </div>
+      );
+    };
+
+    const renderPlayerPickups = (player: typeof p1) => {
+      if (!player) return null;
+      return (
+        <div className={styles.pickupRow}>
+          {player.mega_health_pickups > 0 && (
+            <span className={styles.pickupItem} title="Mega Health">
+              <img src="/img/mega_health.png" alt="MH" className={styles.pickupIcon} />
+              {player.mega_health_pickups}
+            </span>
+          )}
+          {player.heavy_armor_pickups > 0 && (
+            <span className={styles.pickupItem} title="Heavy Armor">
+              <img src="/img/heavy_armor.png" alt="HA" className={styles.pickupIcon} />
+              {player.heavy_armor_pickups}
+            </span>
+          )}
+          {player.light_armor_pickups > 0 && (
+            <span className={styles.pickupItem} title="Light Armor">
+              <img src="/img/light_armor.png" alt="LA" className={styles.pickupIcon} />
+              {player.light_armor_pickups}
+            </span>
+          )}
+          {player.healing > 0 && (
+            <span className={styles.pickupItem} title="Healing">
+              🩺 {player.healing}
+            </span>
+          )}
+        </div>
+      );
+    };
+
     return (
       <article key={post.id} className={`${styles.postCard} ${isNested ? styles.nestedCard : ""}`}>
         {/* Post Header */}
@@ -87,11 +144,7 @@ export default function PublicWallPage() {
           <div className={styles.postHeader}>
             <div className={styles.postAuthor}>
               {post.uploader_avatar && (
-                <img
-                  src={post.uploader_avatar}
-                  alt=""
-                  className={styles.authorAvatar}
-                />
+                <img src={post.uploader_avatar} alt="" className={styles.authorAvatar} />
               )}
               <span className={styles.authorName}>
                 {post.uploader_username || "Anonim"}
@@ -101,7 +154,7 @@ export default function PublicWallPage() {
           </div>
         )}
 
-        {/* Description (if any) */}
+        {/* Description */}
         {post.description && (
           <p className={styles.postDescription}>{post.description}</p>
         )}
@@ -133,6 +186,19 @@ export default function PublicWallPage() {
           </div>
         </div>
 
+        {/* Detailed Stats: Pickups + Weapons */}
+        <div className={styles.detailedStats}>
+          <div className={styles.playerDetail}>
+            {renderPlayerPickups(p1)}
+            {renderPlayerWeapons(p1)}
+          </div>
+          <div className={styles.detailDivider} />
+          <div className={styles.playerDetail}>
+            {renderPlayerPickups(p2)}
+            {renderPlayerWeapons(p2)}
+          </div>
+        </div>
+
         {/* Screenshot Thumbnail */}
         {post.screenshot_url && !isNested && (
           <a
@@ -151,7 +217,7 @@ export default function PublicWallPage() {
           </a>
         )}
 
-        {/* Reactions — only on top-level posts */}
+        {/* Reactions */}
         {!isNested && (
           <ReactionBar
             matchId={post.id}
@@ -161,7 +227,7 @@ export default function PublicWallPage() {
           />
         )}
 
-        {/* Comments — only on top-level posts */}
+        {/* Comments */}
         {!isNested && (
           <CommentSection
             matchId={post.id}
