@@ -5,6 +5,7 @@ import {
   loadImageToCanvas,
   processScreenshot,
   terminateOCR,
+  getRandomLoadingMessage,
   type OCRResult,
   type OCRProgress,
 } from "@/lib/ocr/engine";
@@ -31,6 +32,8 @@ export default function UploadPage() {
   const debugCanvasRef = useRef<HTMLCanvasElement>(null);
   const [showDebug, setShowDebug] = useState(false);
   const [description, setDescription] = useState("");
+  const [funnyMessage, setFunnyMessage] = useState("");
+  const funnyIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -103,6 +106,13 @@ export default function UploadPage() {
     if (!imageFile) return;
     setStage("processing");
 
+    // Start rotating funny messages
+    const locale = (typeof window !== "undefined" && localStorage.getItem("qcstats_locale") === "en") ? "en" : "pl";
+    setFunnyMessage(getRandomLoadingMessage(locale as "pl" | "en"));
+    funnyIntervalRef.current = setInterval(() => {
+      setFunnyMessage(getRandomLoadingMessage(locale as "pl" | "en"));
+    }, 2500);
+
     try {
       const canvas = await loadImageToCanvas(imageFile);
       canvasRef.current = canvas;
@@ -112,6 +122,12 @@ export default function UploadPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "OCR processing failed");
       setStage("error");
+    } finally {
+      // Stop rotating messages
+      if (funnyIntervalRef.current) {
+        clearInterval(funnyIntervalRef.current);
+        funnyIntervalRef.current = null;
+      }
     }
   }, [imageFile, variant]);
 
@@ -236,15 +252,18 @@ export default function UploadPage() {
       )}
 
       {/* ─── Processing ─── */}
-      {stage === "processing" && progress && (
+      {stage === "processing" && (
         <div className={styles.progressContainer}>
           <div className={styles.progressBar}>
             <div
               className={styles.progressFill}
-              style={{ width: `${progress.progress}%` }}
+              style={{ width: `${progress?.progress || 10}%` }}
             />
           </div>
-          <p className={styles.progressText}>{progress.message}</p>
+          <p className={styles.funnyMessage} key={funnyMessage}>{funnyMessage}</p>
+          {progress && (
+            <p className={styles.progressText}>{progress.message}</p>
+          )}
         </div>
       )}
 

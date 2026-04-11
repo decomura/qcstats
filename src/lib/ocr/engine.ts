@@ -10,6 +10,81 @@
 import { WEAPON_NAMES } from "./regions";
 
 // =====================================================
+// QUAKE-THEMED LOADING MESSAGES
+// =====================================================
+
+const LOADING_MESSAGES_PL = [
+  "🚀 Analizuję rakietę... O kurwa, jakie airy!",
+  "⚡ Czekaj, liczę te headsoty z rejla...",
+  "💀 O mój boże! To tak się da strzelać z rejla?!",
+  "🔫 Nie no, chyba troszeczkę przegięłeś z tym machinegunem...",
+  "💊 Co tyle megasów zabrałeś? Zostawiłeś coś dla przeciwnika?",
+  "🎯 Sprawdzam celność... Mam nadzieję, że to nie 12% z LG",
+  "🏃 Gemini skanuje twojego screena szybciej niż strafe jump",
+  "💥 Ej, ten damage to chyba z czołgu, nie z nailguna",
+  "🤯 Kurde, te staty wyglądają lepiej niż u Raphy",
+  "😱 Serio? 80% z rejla? Pokaż demo albo kłamiesz!",
+  "🎮 Ile razy respawnowałeś się na mega? Bo wygląda na dużo...",
+  "⚡ One more frag... jeszcze jeden frag... ok przepraszam, analizuję",
+  "🔥 Te staty są tak gorące, że mój serwer się przegrzewa",
+  "💣 Trybolt? Serio ktoś jeszcze tym strzela?",
+  "🏟️ Gemini wchodzi na arenę i sprawdza twój screenshot...",
+  "⚔️ Hmm, ten gauntlet kill to musiał boleć",
+  "🎯 Celność poniżej 20%? Może spróbuj myszki zamiast pada?",
+  "💀 Analizuję twój scoreboard... współczuję przeciwnikowi",
+  "😤 Za dużo shotguna? Spokojnie, nie oceniam... no dobra, trochę",
+  "🚀 Rakiety latają, ja analizuję... deal with it",
+  "🧠 AI myśli nad twoimi statami... i jest pod wrażeniem",
+  "⚡ Quad Damage aktywowany! Przetwarzanie x4 szybciej!",
+  "💊 Lecimy po mega i po twoje staty jednocześnie!",
+  "🔫 LG tracking na 45%? Ty to chyba z wallhackiem grasz!",
+  "😎 Pro player detected... albo i nie, zaraz sprawdzę",
+  "💥 Eksploduję ten screenshot na czynniki pierwsze...",
+  "🎯 Mhm... te weapon stats mówią więcej niż tysiąc słów",
+  "⚡ Ctrl+F \"skill\" w twoich statach... znalazłem!",
+  "💀 Fragging in progress... cierpliwości, mordeczko",
+  "🏃 Szybciej niż bunny hop na Blood Covenant!",
+];
+
+const LOADING_MESSAGES_EN = [
+  "🚀 Holy shit, those rocket directs are insane!",
+  "⚡ Wait, let me count those rail headshots...",
+  "💀 Dude... that LG tracking is absolutely filthy!",
+  "🔫 Damn, you went full aimbot with that railgun!",
+  "💊 You stole EVERY mega? Leave some for the enemy!",
+  "🎯 Checking accuracy... please don't be 12% LG",
+  "🏃 Gemini scanning faster than a strafe jump",
+  "💥 That damage number looks like a phone number",
+  "🤯 Stats better than Rapha? Lemme verify that...",
+  "😱 80% rail?! Show demo or it didn't happen!",
+  "🎮 How many times did you time mega? Looks like... all of them",
+  "⚡ One more frag... one more frag... ok sorry, analyzing",
+  "🔥 These stats are so hot my GPU is sweating",
+  "💣 Tribolt? Someone actually uses that thing?",
+  "🏟️ Entering the Arena to inspect your scoreboard...",
+  "⚔️ That gauntlet kill must have been humiliating",
+  "🎯 Sub-20% accuracy? Ever tried using a mouse?",
+  "💀 Analyzing scoreboard... RIP to your opponent",
+  "😤 Too much shotgun? I'm not judging... ok maybe a little",
+  "🚀 Rockets flying, stats loading... deal with it",
+  "🧠 AI is thinking about your stats... and it's impressed",
+  "⚡ Quad Damage activated! Processing at 4x speed!",
+  "💊 Grabbing mega and your stats at the same time!",
+  "🔫 45% LG tracking? You sure you're not cheating?!",
+  "😎 Pro player detected... or maybe not, let me check",
+  "💥 Deconstructing this screenshot atom by atom...",
+  "🎯 These weapon stats tell a story... of pure destruction",
+  "⚡ Searching for 'skill' in your stats... found it!",
+  "💀 Fragging in progress... patience, champion",
+  "🏃 Faster than a bunny hop across Blood Covenant!",
+];
+
+export function getRandomLoadingMessage(locale: "pl" | "en" = "pl"): string {
+  const messages = locale === "pl" ? LOADING_MESSAGES_PL : LOADING_MESSAGES_EN;
+  return messages[Math.floor(Math.random() * messages.length)];
+}
+
+// =====================================================
 // TYPES
 // =====================================================
 

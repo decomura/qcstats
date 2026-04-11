@@ -234,6 +234,28 @@
   font-family: var(--font-mono);
 }
 
+.funnyMessage {
+  color: var(--accent-orange);
+  font-size: 1.1rem;
+  font-family: var(--font-display);
+  text-align: center;
+  margin: 1rem 0 0.5rem;
+  animation: funnyFadeIn 0.5s ease-out;
+  min-height: 1.6em;
+  text-shadow: 0 0 20px rgba(255, 107, 0, 0.3);
+}
+
+@keyframes funnyFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 /* ─── Results Panel ─── */
 
 .resultsPanel {
