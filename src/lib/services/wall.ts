@@ -23,6 +23,7 @@ export interface WallPost {
   uploaded_by: string;
   uploader_username: string | null;
   uploader_avatar: string | null;
+  match_group_id: string | null;
   players: {
     player_nick: string;
     side: number;
@@ -34,6 +35,8 @@ export interface WallPost {
   comments: WallComment[];
   reactions: ReactionCount[];
   userReactions: string[]; // reaction types the current user has toggled
+  // For grouped posts
+  groupedMatches?: WallPost[];
 }
 
 export interface WallComment {
@@ -73,7 +76,7 @@ export async function fetchWallPosts(
   const supabase = createClient();
   const offset = (page - 1) * limit;
 
-  // Fetch matches with players
+  // Fetch matches with players — only public matches
   const { data: matches, error } = await supabase
     .from("matches")
     .select(`
@@ -86,9 +89,11 @@ export async function fetchWallPosts(
       created_at,
       match_date,
       uploaded_by,
+      match_group_id,
       profiles:uploaded_by(username, avatar_url),
       match_players(player_nick, side, total_damage, accuracy_pct, kills, is_winner)
     `)
+    .eq("is_public", true)
     .order("created_at", { ascending: false })
     .range(offset, offset + limit);
 
@@ -169,6 +174,7 @@ export async function fetchWallPosts(
       created_at: m.created_at,
       match_date: m.match_date,
       uploaded_by: m.uploaded_by,
+      match_group_id: (m as Record<string, unknown>).match_group_id as string | null,
       uploader_username: profile?.username || null,
       uploader_avatar: profile?.avatar_url || null,
       players: (m.match_players as unknown as WallPost["players"]) || [],
@@ -181,8 +187,37 @@ export async function fetchWallPosts(
     };
   });
 
+  // Group matches by match_group_id
+  const groupedPosts: WallPost[] = [];
+  const groupMap = new Map<string, WallPost[]>();
+
+  for (const post of posts) {
+    if (post.match_group_id) {
+      const existing = groupMap.get(post.match_group_id);
+      if (existing) {
+        existing.push(post);
+      } else {
+        groupMap.set(post.match_group_id, [post]);
+      }
+    } else {
+      groupedPosts.push(post);
+    }
+  }
+
+  // Create grouped posts (first match is the "header", rest are grouped inside)
+  for (const [, groupMatches] of groupMap) {
+    const firstMatch = groupMatches[0];
+    groupedPosts.push({
+      ...firstMatch,
+      groupedMatches: groupMatches.length > 1 ? groupMatches : undefined,
+    });
+  }
+
+  // Sort by created_at (newest first) since grouping may have shuffled order
+  groupedPosts.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
   return {
-    posts,
+    posts: groupedPosts,
     hasMore: matches.length > limit,
   };
 }

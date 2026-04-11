@@ -55,7 +55,7 @@ export default function DashboardNav({ user }: Props) {
           <a href="/dashboard/friends" className={styles.link}>
             👥 {t("friends.title")}
           </a>
-          <a href="/dashboard/wall" className={styles.link}>
+          <a href="/wall" className={styles.link}>
             🏟️ Wall
           </a>
         </div>
@@ -116,7 +116,7 @@ export default function DashboardNav({ user }: Props) {
           <a href="/dashboard/history" className={styles.mobileLink} onClick={() => setMobileOpen(false)}>📋 {t("nav.history")}</a>
           <a href="/dashboard/compare" className={styles.mobileLink} onClick={() => setMobileOpen(false)}>⚔️ {t("nav.compare")}</a>
           <a href="/dashboard/friends" className={styles.mobileLink} onClick={() => setMobileOpen(false)}>👥 {t("friends.title")}</a>
-          <a href="/dashboard/wall" className={styles.mobileLink} onClick={() => setMobileOpen(false)}>🏟️ Wall</a>
+          <a href="/wall" className={styles.mobileLink} onClick={() => setMobileOpen(false)}>🏟️ Wall</a>
           <a href="/dashboard/settings" className={styles.mobileLink} onClick={() => setMobileOpen(false)}>⚙️ {t("nav.settings")}</a>
           <button onClick={() => { setLocale(locale === "en" ? "pl" : "en"); setMobileOpen(false); }} className={styles.mobileLink} type="button">🌐 {locale === "en" ? "Polski" : "English"}</button>
           <button onClick={handleLogout} className={styles.mobileLink} type="button">🚪 {t("nav.logout")}</button>

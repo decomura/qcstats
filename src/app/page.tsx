@@ -41,6 +41,9 @@ export default function LandingPage() {
             <a href="/login" className="btn btn-primary btn-lg" id="cta-get-started">
               ⚡ Get Started
             </a>
+            <a href="/wall" className="btn btn-secondary btn-lg" id="cta-community-wall">
+              🏟️ Community Wall
+            </a>
             <a href="#how-it-works" className="btn btn-secondary btn-lg" id="cta-how-works">
               How It Works
             </a>

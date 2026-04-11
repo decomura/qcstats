@@ -10,11 +10,19 @@ import {
   type OCRProgress,
 } from "@/lib/ocr/engine";
 import { drawDebugOverlay } from "@/lib/ocr/debug";
-import { saveMatch } from "@/lib/services/matches";
+import { saveMatch, createMatchGroup } from "@/lib/services/matches";
 import { createClient } from "@/lib/supabase/client";
 import styles from "./upload.module.css";
 
-type Stage = "idle" | "preview" | "processing" | "results" | "saving" | "saved" | "error";
+type Stage = "idle" | "preview" | "processing" | "results" | "saving" | "saved" | "error" | "bulk-processing" | "bulk-results";
+
+interface BulkItem {
+  file: File;
+  imageUrl: string;
+  status: "pending" | "processing" | "done" | "error";
+  result?: OCRResult;
+  error?: string;
+}
 
 export default function UploadPage() {
   const [stage, setStage] = useState<Stage>("idle");
@@ -32,8 +40,14 @@ export default function UploadPage() {
   const debugCanvasRef = useRef<HTMLCanvasElement>(null);
   const [showDebug, setShowDebug] = useState(false);
   const [description, setDescription] = useState("");
+  const [publishToWall, setPublishToWall] = useState(true);
   const [funnyMessage, setFunnyMessage] = useState("");
   const funnyIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Bulk upload state
+  const [bulkItems, setBulkItems] = useState<BulkItem[]>([]);
+  const [bulkPublishAsGroup, setBulkPublishAsGroup] = useState(true);
+  const [bulkPublishToWall, setBulkPublishToWall] = useState(true);
+  const [bulkDescription, setBulkDescription] = useState("");
 
   // Cleanup on unmount
   useEffect(() => {
@@ -79,8 +93,12 @@ export default function UploadPage() {
     (e: React.DragEvent) => {
       e.preventDefault();
       setIsDragging(false);
-      const file = e.dataTransfer.files[0];
-      if (file) handleFile(file);
+      const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith("image/"));
+      if (files.length > 1) {
+        startBulkMode(files.slice(0, 10));
+      } else if (files[0]) {
+        handleFile(files[0]);
+      }
     },
     [handleFile]
   );
@@ -96,11 +114,109 @@ export default function UploadPage() {
 
   const handleFileInput = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (file) handleFile(file);
+      const files = Array.from(e.target.files || []).filter(f => f.type.startsWith("image/"));
+      if (files.length > 1) {
+        startBulkMode(files.slice(0, 10));
+      } else if (files[0]) {
+        handleFile(files[0]);
+      }
     },
     [handleFile]
   );
+
+  // === BULK MODE ===
+  const startBulkMode = useCallback((files: File[]) => {
+    const items: BulkItem[] = files.map(f => ({
+      file: f,
+      imageUrl: URL.createObjectURL(f),
+      status: "pending" as const,
+    }));
+    setBulkItems(items);
+    setStage("bulk-processing");
+    processBulk(items);
+  }, []);
+
+  const processBulk = useCallback(async (items: BulkItem[]) => {
+    const locale = (typeof window !== "undefined" && localStorage.getItem("qcstats_locale") === "en") ? "en" : "pl";
+    setFunnyMessage(getRandomLoadingMessage(locale as "pl" | "en"));
+    funnyIntervalRef.current = setInterval(() => {
+      setFunnyMessage(getRandomLoadingMessage(locale as "pl" | "en"));
+    }, 2500);
+
+    const updated = [...items];
+
+    for (let i = 0; i < updated.length; i++) {
+      updated[i] = { ...updated[i], status: "processing" };
+      setBulkItems([...updated]);
+
+      try {
+        const canvas = await loadImageToCanvas(updated[i].file);
+        const ocrResult = await processScreenshot(canvas, undefined, "total_score", updated[i].file);
+        updated[i] = { ...updated[i], status: "done", result: ocrResult };
+      } catch (err) {
+        updated[i] = { ...updated[i], status: "error", error: err instanceof Error ? err.message : "OCR failed" };
+      }
+      setBulkItems([...updated]);
+    }
+
+    if (funnyIntervalRef.current) {
+      clearInterval(funnyIntervalRef.current);
+      funnyIntervalRef.current = null;
+    }
+
+    setStage("bulk-results");
+  }, []);
+
+  const handleBulkSave = useCallback(async () => {
+    setIsSaving(true);
+    setStage("saving");
+
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setError("You must be logged in.");
+        setStage("error");
+        return;
+      }
+
+      const successItems = bulkItems.filter(item => item.status === "done" && item.result);
+      if (successItems.length === 0) {
+        setError("No screenshots were processed successfully.");
+        setStage("error");
+        return;
+      }
+
+      let groupId: string | undefined;
+      if (bulkPublishAsGroup && bulkPublishToWall && successItems.length > 1) {
+        const gId = await createMatchGroup(user.id, undefined, bulkDescription);
+        if (gId) groupId = gId;
+      }
+
+      let savedCount = 0;
+      for (const item of successItems) {
+        if (!item.result) continue;
+        const result = await saveMatch(
+          item.result,
+          item.file,
+          user.id,
+          undefined,
+          bulkPublishAsGroup ? "" : bulkDescription,
+          bulkPublishToWall,
+          groupId
+        );
+        if (result.success) savedCount++;
+      }
+
+      setSavedMatchId(null);
+      setStage("saved");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Bulk save failed");
+      setStage("error");
+    } finally {
+      setIsSaving(false);
+    }
+  }, [bulkItems, bulkPublishAsGroup, bulkPublishToWall, bulkDescription]);
 
   const startOCR = useCallback(async () => {
     if (!imageFile) return;
@@ -155,7 +271,7 @@ export default function UploadPage() {
         return;
       }
 
-      const saveResult = await saveMatch(result, imageFile, user.id, undefined, description);
+      const saveResult = await saveMatch(result, imageFile, user.id, undefined, description, publishToWall);
 
       if (saveResult.isDuplicate) {
         setError("This match already exists in the database. Duplicate detected!");
@@ -177,7 +293,7 @@ export default function UploadPage() {
     } finally {
       setIsSaving(false);
     }
-  }, [result, imageFile]);
+  }, [result, imageFile, publishToWall, description]);
 
   return (
     <div className={styles.uploadPage}>
@@ -217,6 +333,7 @@ export default function UploadPage() {
             ref={fileInputRef}
             type="file"
             accept="image/*"
+            multiple
             className={styles.fileInput}
             onChange={handleFileInput}
           />
@@ -310,6 +427,19 @@ export default function UploadPage() {
             />
           </div>
 
+          {/* Publish to Wall checkbox */}
+          <div style={{ margin: "0.5rem 0 0.75rem", padding: "0 0.5rem" }}>
+            <label className={styles.checkboxLabel}>
+              <input
+                type="checkbox"
+                checked={publishToWall}
+                onChange={(e) => setPublishToWall(e.target.checked)}
+                className={styles.checkbox}
+              />
+              <span>📢 Publikuj na Community Wall</span>
+            </label>
+          </div>
+
           {/* Image preview with optional debug overlay */}
           {imageUrl && (
             <div className={styles.imagePreview} style={{ position: "relative" }}>
@@ -387,6 +517,120 @@ export default function UploadPage() {
         </div>
       )}
 
+      {/* ─── Bulk Processing ─── */}
+      {stage === "bulk-processing" && (
+        <div className={styles.previewSection}>
+          <h2 style={{ fontFamily: "var(--font-display)", color: "var(--text-primary)" }}>
+            📦 Bulk Upload — {bulkItems.filter(i => i.status === "done").length}/{bulkItems.length}
+          </h2>
+          <p className={styles.funnyMessage} key={funnyMessage}>{funnyMessage}</p>
+          <div className={styles.bulkList}>
+            {bulkItems.map((item, i) => (
+              <div key={i} className={`${styles.bulkItem} ${styles[`bulk-${item.status}`]}`}>
+                <img src={item.imageUrl} alt="" className={styles.bulkThumb} />
+                <div className={styles.bulkItemInfo}>
+                  <span className={styles.bulkItemName}>{item.file.name}</span>
+                  <span className={styles.bulkItemStatus}>
+                    {item.status === "pending" && "⏳ Oczekuje..."}
+                    {item.status === "processing" && "🔄 Przetwarzanie..."}
+                    {item.status === "done" && `✅ ${item.result?.player1.nick} vs ${item.result?.player2.nick}`}
+                    {item.status === "error" && `❌ ${item.error}`}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ─── Bulk Results ─── */}
+      {stage === "bulk-results" && (
+        <div className={styles.previewSection}>
+          <div className={styles.previewHeader}>
+            <h2>📦 Bulk Upload — Wyniki</h2>
+            <div className={styles.previewActions}>
+              <button className={styles.btnCancel} onClick={reset}>
+                ↩ Anuluj
+              </button>
+              <button
+                className={styles.btnSave}
+                onClick={handleBulkSave}
+                disabled={isSaving || bulkItems.filter(i => i.status === "done").length === 0}
+              >
+                💾 ZAPISZ {bulkItems.filter(i => i.status === "done").length} MECZÓW
+              </button>
+            </div>
+          </div>
+
+          {/* Bulk options */}
+          <div style={{ margin: "0.75rem 0", padding: "0 0.5rem", display: "flex", flexDirection: "column", gap: "8px" }}>
+            <label className={styles.checkboxLabel}>
+              <input
+                type="checkbox"
+                checked={bulkPublishToWall}
+                onChange={(e) => setBulkPublishToWall(e.target.checked)}
+                className={styles.checkbox}
+              />
+              <span>📢 Publikuj na Community Wall</span>
+            </label>
+            {bulkPublishToWall && (
+              <label className={styles.checkboxLabel}>
+                <input
+                  type="checkbox"
+                  checked={bulkPublishAsGroup}
+                  onChange={(e) => setBulkPublishAsGroup(e.target.checked)}
+                  className={styles.checkbox}
+                />
+                <span>📦 Jako jeden post (grupowy)</span>
+              </label>
+            )}
+            <input
+              type="text"
+              value={bulkDescription}
+              onChange={(e) => setBulkDescription(e.target.value)}
+              maxLength={300}
+              placeholder="Opis sesji (opcjonalnie)"
+              style={{
+                width: "100%",
+                padding: "8px 12px",
+                background: "rgba(255,255,255,0.04)",
+                border: "1px solid var(--border-subtle)",
+                borderRadius: "8px",
+                color: "var(--text-primary)",
+                fontSize: "0.85rem",
+                outline: "none",
+              }}
+            />
+          </div>
+
+          {/* Match results list */}
+          <div className={styles.bulkList}>
+            {bulkItems.map((item, i) => (
+              <div key={i} className={`${styles.bulkItem} ${styles[`bulk-${item.status}`]}`}>
+                <img src={item.imageUrl} alt="" className={styles.bulkThumb} />
+                <div className={styles.bulkItemInfo}>
+                  {item.status === "done" && item.result ? (
+                    <>
+                      <span className={styles.bulkItemName}>
+                        {item.result.player1.nick} <strong>{item.result.player1.score}:{item.result.player2.score}</strong> {item.result.player2.nick}
+                      </span>
+                      <span className={styles.bulkItemStatus}>
+                        🎯 Confidence: {item.result.confidence}%
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span className={styles.bulkItemName}>{item.file.name}</span>
+                      <span className={styles.bulkItemStatus}>❌ {item.error || "Niepowodzenie"}</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* ─── Saved ─── */}
       {stage === "saved" && (
         <div className={styles.resultsPanel} style={{ marginTop: "2rem", textAlign: "center", padding: "3rem" }}>
@@ -399,6 +643,9 @@ export default function UploadPage() {
           </p>
           <div className={styles.previewActions} style={{ justifyContent: "center" }}>
             <button className={styles.btnCancel} onClick={reset}>📸 Upload Another</button>
+            <a href="/wall" className={styles.btnCancel} style={{ textDecoration: "none", display: "inline-flex", alignItems: "center" }}>
+              🏟️ Wall
+            </a>
             <a href="/dashboard" className={styles.btnSave} style={{ textDecoration: "none", display: "inline-flex", alignItems: "center" }}>
               📊 Dashboard
             </a>

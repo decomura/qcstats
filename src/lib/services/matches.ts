@@ -123,7 +123,9 @@ export async function saveMatch(
     player1Score?: number;
     player2Score?: number;
   },
-  description?: string
+  description?: string,
+  publishToWall: boolean = true,
+  matchGroupId?: string
 ): Promise<SaveMatchResult> {
   const supabase = createClient();
 
@@ -160,6 +162,8 @@ export async function saveMatch(
       screenshot_url: screenshotUrl,
       match_date: new Date().toISOString(),
       description: description?.trim() || "",
+      is_public: publishToWall,
+      match_group_id: matchGroupId || null,
     })
     .select("id")
     .single();
@@ -261,6 +265,34 @@ function buildWeaponStat(weapon: WeaponStat, matchPlayerId: string) {
     damage: weapon.damage,
     kills: weapon.kills,
   };
+}
+
+/**
+ * Create a match group for bulk uploads
+ */
+export async function createMatchGroup(
+  userId: string,
+  title?: string,
+  description?: string
+): Promise<string | null> {
+  const supabase = createClient();
+
+  const { data, error } = await supabase
+    .from("match_groups")
+    .insert({
+      user_id: userId,
+      title: title || null,
+      description: description?.trim() || "",
+    })
+    .select("id")
+    .single();
+
+  if (error || !data) {
+    console.error("Failed to create match group:", error);
+    return null;
+  }
+
+  return data.id;
 }
 
 /**

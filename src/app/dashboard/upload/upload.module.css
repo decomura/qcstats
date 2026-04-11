@@ -535,3 +535,102 @@
   background: rgba(204, 68, 0, 0.5);
   border-color: var(--accent-orange);
 }
+
+/* ─── Checkbox ─── */
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-family: var(--font-display);
+  transition: color 0.2s;
+}
+
+.checkboxLabel:hover {
+  color: var(--text-primary);
+}
+
+.checkbox {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent-orange);
+  cursor: pointer;
+}
+
+/* ─── Bulk Upload ─── */
+.bulkList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 1rem;
+}
+
+.bulkItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-subtle);
+  transition: all 0.3s;
+}
+
+.bulk-pending {
+  opacity: 0.5;
+}
+
+.bulk-processing {
+  border-color: var(--accent-orange);
+  background: rgba(255, 107, 0, 0.05);
+  animation: bulkPulse 1.5s infinite;
+}
+
+.bulk-done {
+  border-color: var(--accent-green);
+  background: rgba(0, 204, 102, 0.05);
+}
+
+.bulk-error {
+  border-color: var(--accent-red);
+  background: rgba(204, 0, 0, 0.05);
+}
+
+@keyframes bulkPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.bulkThumb {
+  width: 60px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.bulkItemInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.bulkItemName {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bulkItemStatus {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
