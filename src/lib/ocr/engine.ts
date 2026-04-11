@@ -79,9 +79,16 @@ const LOADING_MESSAGES_EN = [
   "🏃 Faster than a bunny hop across Blood Covenant!",
 ];
 
+let lastMessageIndex: Record<string, number> = { pl: -1, en: -1 };
+
 export function getRandomLoadingMessage(locale: "pl" | "en" = "pl"): string {
   const messages = locale === "pl" ? LOADING_MESSAGES_PL : LOADING_MESSAGES_EN;
-  return messages[Math.floor(Math.random() * messages.length)];
+  let idx: number;
+  do {
+    idx = Math.floor(Math.random() * messages.length);
+  } while (idx === lastMessageIndex[locale] && messages.length > 1);
+  lastMessageIndex[locale] = idx;
+  return messages[idx];
 }
 
 // =====================================================

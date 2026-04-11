@@ -144,7 +144,7 @@ export default function UploadPage() {
     setFunnyMessage(getRandomLoadingMessage(locale as "pl" | "en"));
     funnyIntervalRef.current = setInterval(() => {
       setFunnyMessage(getRandomLoadingMessage(locale as "pl" | "en"));
-    }, 2500);
+    }, 3000);
 
     const updated = [...items];
 
@@ -230,7 +230,7 @@ export default function UploadPage() {
     setFunnyMessage(getRandomLoadingMessage(locale as "pl" | "en"));
     funnyIntervalRef.current = setInterval(() => {
       setFunnyMessage(getRandomLoadingMessage(locale as "pl" | "en"));
-    }, 2500);
+    }, 3000);
 
     try {
       const canvas = await loadImageToCanvas(imageFile);
@@ -248,7 +248,7 @@ export default function UploadPage() {
         funnyIntervalRef.current = null;
       }
     }
-  }, [imageFile, variant]);
+  }, [imageFile]);
 
   const reset = useCallback(() => {
     setStage("idle");
@@ -361,14 +361,6 @@ export default function UploadPage() {
           <div className={styles.previewHeader}>
             <h2>📋 Screenshot Preview</h2>
             <div className={styles.previewActions}>
-              <select
-                className={styles.variantSelect}
-                value={variant}
-                onChange={(e) => setVariant(e.target.value as "total_score" | "ranking")}
-              >
-                <option value="total_score">ŁĄCZNY WYNIK</option>
-                <option value="ranking">RANKING</option>
-              </select>
               <button className={styles.btnCancel} onClick={reset}>
                 ✕ Cancel
               </button>
@@ -393,9 +385,6 @@ export default function UploadPage() {
             />
           </div>
           <p className={styles.funnyMessage} key={funnyMessage}>{funnyMessage}</p>
-          {progress && (
-            <p className={styles.progressText}>{progress.message}</p>
-          )}
         </div>
       )}
 
