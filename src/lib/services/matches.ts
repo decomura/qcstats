@@ -12,11 +12,24 @@
 import { createClient } from "@/lib/supabase/client";
 import type { OCRResult, PlayerStats, WeaponStat } from "@/lib/ocr/engine";
 
+export interface NickAnalysisResult {
+  nick: string;
+  found: boolean;
+  profileId?: string;
+  username?: string;
+}
+
 export interface SaveMatchResult {
   success: boolean;
   matchId?: string;
   error?: string;
   isDuplicate?: boolean;
+  nickAnalysis?: {
+    player1: NickAnalysisResult;
+    player2: NickAnalysisResult;
+    autoFriendCreated?: boolean;
+    notificationSent?: boolean;
+  };
 }
 
 /**
@@ -98,16 +111,16 @@ async function checkDuplicate(
 /**
  * Link a player nick to a profile_id if the username exists
  */
-async function findProfileByNick(nick: string): Promise<string | null> {
+async function findProfileByNick(nick: string): Promise<{ id: string; username: string } | null> {
   const supabase = createClient();
 
   const { data } = await supabase
     .from("profiles")
-    .select("id")
+    .select("id, username")
     .ilike("username", nick)
     .single();
 
-  return data?.id || null;
+  return data ? { id: data.id, username: data.username } : null;
 }
 
 /**
@@ -178,8 +191,10 @@ export async function saveMatch(
   const matchId = matchData.id;
 
   // 4. Find profile IDs for player nicks
-  const p1ProfileId = await findProfileByNick(p1Nick);
-  const p2ProfileId = await findProfileByNick(p2Nick);
+  const p1Profile = await findProfileByNick(p1Nick);
+  const p2Profile = await findProfileByNick(p2Nick);
+  const p1ProfileId = p1Profile?.id || null;
+  const p2ProfileId = p2Profile?.id || null;
 
   // 5. Create match_players records
   const playersToInsert = [
@@ -220,9 +235,68 @@ export async function saveMatch(
     }
   }
 
+  // 7. Auto-friendship & notifications
+  let autoFriendCreated = false;
+  let notificationSent = false;
+
+  // Determine who is the uploader and who is the opponent
+  const uploaderProfileId = userId;
+  const opponentProfileId = p1ProfileId === userId ? p2ProfileId : p1ProfileId;
+  const opponentNick = p1ProfileId === userId ? p2Nick : p1Nick;
+  const uploaderNick = p1ProfileId === userId ? p1Nick : p2Nick;
+
+  if (opponentProfileId && opponentProfileId !== uploaderProfileId) {
+    // Auto-friend: check if friendship already exists
+    const { data: existingFriend } = await supabase
+      .from("friends")
+      .select("id")
+      .or(
+        `and(requester_id.eq.${uploaderProfileId},addressee_id.eq.${opponentProfileId}),and(requester_id.eq.${opponentProfileId},addressee_id.eq.${uploaderProfileId})`
+      )
+      .maybeSingle();
+
+    if (!existingFriend) {
+      const { error: friendError } = await supabase.from("friends").insert({
+        requester_id: uploaderProfileId,
+        addressee_id: opponentProfileId,
+        status: "accepted",
+      });
+      autoFriendCreated = !friendError;
+    }
+
+    // Notification to opponent about new match
+    const { error: notifError } = await supabase.from("notifications").insert({
+      user_id: opponentProfileId,
+      type: "new_match",
+      title: "🎮 Nowy mecz!",
+      body: `${uploaderNick} wrzucił mecz: ${p1Nick} ${p1Score}:${p2Score} ${p2Nick}`,
+      data: { match_id: matchId },
+    });
+    notificationSent = !notifError;
+  }
+
+  // 8. Build nick analysis
+  const nickAnalysis = {
+    player1: {
+      nick: p1Nick,
+      found: !!p1ProfileId,
+      profileId: p1ProfileId || undefined,
+      username: p1Profile?.username || undefined,
+    },
+    player2: {
+      nick: p2Nick,
+      found: !!p2ProfileId,
+      profileId: p2ProfileId || undefined,
+      username: p2Profile?.username || undefined,
+    },
+    autoFriendCreated,
+    notificationSent,
+  };
+
   return {
     success: true,
     matchId,
+    nickAnalysis,
   };
 }
 

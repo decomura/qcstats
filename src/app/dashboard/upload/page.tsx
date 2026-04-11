@@ -10,7 +10,7 @@ import {
   type OCRProgress,
 } from "@/lib/ocr/engine";
 import { drawDebugOverlay } from "@/lib/ocr/debug";
-import { saveMatch, createMatchGroup } from "@/lib/services/matches";
+import { saveMatch, createMatchGroup, type SaveMatchResult, type NickAnalysisResult } from "@/lib/services/matches";
 import { createClient } from "@/lib/supabase/client";
 import styles from "./upload.module.css";
 
@@ -34,6 +34,9 @@ export default function UploadPage() {
   const [isDragging, setIsDragging] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [savedMatchId, setSavedMatchId] = useState<string | null>(null);
+  const [lastNickAnalysis, setLastNickAnalysis] = useState<SaveMatchResult["nickAnalysis"] | null>(null);
+  const [inviteCode, setInviteCode] = useState<string | null>(null);
+  const [copiedInvite, setCopiedInvite] = useState(false);
   const [variant, setVariant] = useState<"total_score" | "ranking">("total_score");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -286,6 +289,18 @@ export default function UploadPage() {
       }
 
       setSavedMatchId(saveResult.matchId || null);
+      setLastNickAnalysis(saveResult.nickAnalysis || null);
+
+      // Fetch invite code for "invite" button
+      if (saveResult.nickAnalysis) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("invite_code")
+          .eq("id", user.id)
+          .single();
+        setInviteCode(profile?.invite_code || null);
+      }
+
       setStage("saved");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Save failed");
@@ -633,15 +648,56 @@ export default function UploadPage() {
 
       {/* ─── Saved ─── */}
       {stage === "saved" && (
-        <div className={styles.resultsPanel} style={{ marginTop: "2rem", textAlign: "center", padding: "3rem" }}>
-          <span style={{ fontSize: "3rem" }}>🎉</span>
-          <h2 style={{ fontFamily: "var(--font-display)", color: "var(--accent-green)", marginTop: "1rem" }}>
-            MATCH SAVED!
-          </h2>
-          <p style={{ color: "var(--text-secondary)", margin: "1rem 0" }}>
-            Your duel has been recorded in the database.
-          </p>
-          <div className={styles.previewActions} style={{ justifyContent: "center" }}>
+        <div className={styles.resultsPanel} style={{ marginTop: "2rem", padding: "2rem" }}>
+          <div style={{ textAlign: "center" }}>
+            <span style={{ fontSize: "3rem" }}>🎉</span>
+            <h2 style={{ fontFamily: "var(--font-display)", color: "var(--accent-green)", marginTop: "1rem" }}>
+              MATCH SAVED!
+            </h2>
+            <p style={{ color: "var(--text-secondary)", margin: "0.5rem 0" }}>
+              Your duel has been recorded in the database.
+            </p>
+          </div>
+
+          {/* Nick Analysis Panel */}
+          {lastNickAnalysis && (
+            <div className={styles.nickAnalysis}>
+              <h3 style={{ fontFamily: "var(--font-display)", fontSize: "0.9rem", color: "var(--text-secondary)", marginBottom: "0.75rem" }}>
+                🔍 Rozpoznawanie graczy
+              </h3>
+              {[lastNickAnalysis.player1, lastNickAnalysis.player2].map((p, i) => (
+                <div key={i} className={`${styles.nickRow} ${p.found ? styles.nickFound : styles.nickNotFound}`}>
+                  <span className={styles.nickName}>{p.nick}</span>
+                  {p.found ? (
+                    <span className={styles.nickStatus}>
+                      ✅ Rozpoznany jako <strong>{p.username}</strong>
+                      {lastNickAnalysis.autoFriendCreated && i === 1 && " • Auto-friend! 🤝"}
+                      {lastNickAnalysis.notificationSent && i === 1 && " • Powiadomienie wysłane 🔔"}
+                    </span>
+                  ) : (
+                    <span className={styles.nickStatus}>
+                      ❌ Nie znaleziony w systemie
+                      {inviteCode && (
+                        <button
+                          className={styles.inviteBtn}
+                          onClick={() => {
+                            const url = `${window.location.origin}/login?invite=${inviteCode}`;
+                            navigator.clipboard.writeText(url);
+                            setCopiedInvite(true);
+                            setTimeout(() => setCopiedInvite(false), 3000);
+                          }}
+                        >
+                          {copiedInvite ? "✅ Skopiowano!" : `📨 Zaproś ${p.nick}`}
+                        </button>
+                      )}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className={styles.previewActions} style={{ justifyContent: "center", marginTop: "1.5rem" }}>
             <button className={styles.btnCancel} onClick={reset}>📸 Upload Another</button>
             <a href="/wall" className={styles.btnCancel} style={{ textDecoration: "none", display: "inline-flex", alignItems: "center" }}>
               🏟️ Wall
