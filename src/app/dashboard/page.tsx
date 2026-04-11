@@ -10,23 +10,42 @@ export default async function DashboardPage() {
 
   if (!user) redirect("/login");
 
-  // Fetch user stats from DB
-  const { data: matchPlayers } = await supabase
-    .from("match_players")
-    .select(`
-      score,
-      total_damage,
-      accuracy_pct,
-      is_winner,
-      healing,
-      mega_health_pickups,
-      heavy_armor_pickups,
-      match_id,
-      player_nick,
-      side,
-      weapon_stats(weapon_name, accuracy_pct, damage, kills)
-    `)
-    .eq("profile_id", user.id);
+  // Fetch user profile for display name
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("username, display_name")
+    .eq("id", user.id)
+    .single();
+
+  const displayName = profile?.display_name || profile?.username || user.email?.split("@")[0] || "Player";
+
+  // Fetch ALL matches uploaded by user (to get match IDs)
+  const { data: userMatchIds } = await supabase
+    .from("matches")
+    .select("id")
+    .eq("uploaded_by", user.id);
+
+  const matchIds = (userMatchIds || []).map(m => m.id);
+
+  // Fetch player stats for those matches
+  const { data: matchPlayers } = matchIds.length > 0
+    ? await supabase
+        .from("match_players")
+        .select(`
+          score,
+          total_damage,
+          accuracy_pct,
+          is_winner,
+          healing,
+          mega_health_pickups,
+          heavy_armor_pickups,
+          match_id,
+          player_nick,
+          side,
+          weapon_stats(weapon_name, accuracy_pct, damage, kills)
+        `)
+        .in("match_id", matchIds)
+    : { data: [] };
 
   // Fetch recent matches
   const { data: recentMatches } = await supabase
@@ -127,7 +146,7 @@ export default async function DashboardPage() {
     <DashboardContent
       stats={stats}
       recentMatches={recentMatches || []}
-      userName={user.user_metadata?.preferred_username || user.email?.split("@")[0] || "Player"}
+      userName={displayName}
       accuracyChartData={accuracyChartData}
       weaponChartData={weaponChartData}
     />

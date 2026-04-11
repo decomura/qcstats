@@ -311,6 +311,117 @@
   opacity: 1;
 }
 
+/* ---- Value Colors ---- */
+.valHigher {
+  color: var(--accent-green, #00cc66) !important;
+}
+.valLower {
+  color: var(--accent-red, #cc0000) !important;
+}
+.valEqual {
+  color: var(--text-secondary) !important;
+}
+
+/* ---- Symmetric Stats Section ---- */
+.symSection {
+  margin: 0.4rem 0;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.015);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+}
+
+.symRow,
+.symWeaponRow {
+  display: grid;
+  grid-template-columns: 1fr 32px 1fr;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+}
+
+.symRow:last-child,
+.symWeaponRow:last-child {
+  border-bottom: none;
+}
+
+.symIcon {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 3px rgba(255, 107, 0, 0.3));
+  justify-self: center;
+}
+
+.symLabelIcon {
+  font-size: 1.2rem;
+  text-align: center;
+}
+
+.symVal {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.symLeft {
+  text-align: right;
+}
+
+.symRight {
+  text-align: left;
+}
+
+.symWVal {
+  display: flex;
+  gap: 6px;
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 0.7rem;
+  align-items: center;
+}
+
+.symWVal.symLeft {
+  justify-content: flex-end;
+}
+
+.symWVal.symRight {
+  justify-content: flex-start;
+}
+
+.symWAcc {
+  font-size: 0.65rem;
+  opacity: 0.8;
+}
+
+/* ---- Post Footer ---- */
+.postFooter {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0.4rem 0;
+}
+
+.screenshotBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  font-family: var(--font-display);
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.screenshotBtn:hover {
+  background: rgba(255, 107, 0, 0.1);
+  border-color: var(--accent-orange);
+  color: var(--accent-orange);
+}
+
 /* ---- Detailed Stats ---- */
 .detailedStats {
   display: grid;

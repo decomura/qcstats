@@ -111,7 +111,12 @@ export default function HistoryContent({ matches }: Props) {
               );
 
               return (
-                <div key={match.id} className={styles.tableRow}>
+                <Link
+                  key={match.id}
+                  href={`/dashboard/match/${match.id}`}
+                  className={styles.tableRow}
+                  style={{ textDecoration: "none" }}
+                >
                   <span className={styles.date}>{matchDate}</span>
                   <span
                     className={`${styles.player} ${p1?.is_winner ? styles.winner : styles.loser}`}
@@ -153,7 +158,7 @@ export default function HistoryContent({ matches }: Props) {
                   <span className={styles.stat}>
                     {p1?.total_damage || 0} / {p2?.total_damage || 0}
                   </span>
-                </div>
+                </Link>
               );
             })}
           </div>

@@ -50,8 +50,20 @@ export default async function ComparePage() {
 
   for (const match of userMatches || []) {
     const players = match.match_players as MatchPlayerRow[];
-    const me = players.find((p) => p.profile_id === user.id);
-    const opponent = players.find((p) => p.profile_id !== user.id || (p.profile_id === null && p.player_nick !== me?.player_nick));
+    if (players.length < 2) continue;
+
+    // Since we queried uploaded_by = user.id, the uploader is one of the players
+    // Try profile_id first, then fallback to side=1 (uploader is usually P1)
+    let me = players.find((p) => p.profile_id === user.id);
+    let opponent: MatchPlayerRow | undefined;
+
+    if (me) {
+      opponent = players.find((p) => p !== me);
+    } else {
+      // Fallback: assume uploader's nick - just pick both sides
+      me = players[0];
+      opponent = players[1];
+    }
 
     if (!me || !opponent) continue;
 

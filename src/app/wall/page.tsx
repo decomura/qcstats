@@ -80,66 +80,24 @@ export default function PublicWallPage() {
     const p1 = post.players.find((p) => p.side === 1);
     const p2 = post.players.find((p) => p.side === 2);
 
-    const renderPlayerWeapons = (player: typeof p1) => {
-      if (!player?.weapon_stats?.length) return null;
-      const sorted = [...player.weapon_stats]
-        .filter(w => w.damage > 0 || w.kills > 0)
-        .sort((a, b) => b.damage - a.damage);
-      if (sorted.length === 0) return null;
+    const valClass = (a: number, b: number) =>
+      a > b ? styles.valHigher : a < b ? styles.valLower : styles.valEqual;
 
-      return (
-        <div className={styles.weaponList}>
-          {sorted.slice(0, 5).map((w, i) => (
-            <div key={i} className={styles.weaponItem} title={w.weapon_name}>
-              <img
-                src={`/img/${w.weapon_name.toLowerCase().replace(/ /g, "_").replace("lightning", "lighting")}.png`}
-                alt={w.weapon_name}
-                className={styles.weaponIcon}
-                onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-              />
-              <span className={styles.weaponAcc}>{w.accuracy_pct > 0 ? `${w.accuracy_pct}%` : ""}</span>
-              <span className={styles.weaponDmg}>{w.damage > 0 ? w.damage : ""}</span>
-              <span className={styles.weaponKills}>{w.kills > 0 ? `${w.kills}K` : ""}</span>
-            </div>
-          ))}
-        </div>
-      );
-    };
+    const wIcon = (name: string) =>
+      `/img/${name.toLowerCase().replace(/ /g, "_").replace("lightning", "lighting")}.png`;
 
-    const renderPlayerPickups = (player: typeof p1) => {
-      if (!player) return null;
-      return (
-        <div className={styles.pickupRow}>
-          {player.mega_health_pickups > 0 && (
-            <span className={styles.pickupItem} title="Mega Health">
-              <img src="/img/mega_health.png" alt="MH" className={styles.pickupIcon} />
-              {player.mega_health_pickups}
-            </span>
-          )}
-          {player.heavy_armor_pickups > 0 && (
-            <span className={styles.pickupItem} title="Heavy Armor">
-              <img src="/img/heavy_armor.png" alt="HA" className={styles.pickupIcon} />
-              {player.heavy_armor_pickups}
-            </span>
-          )}
-          {player.light_armor_pickups > 0 && (
-            <span className={styles.pickupItem} title="Light Armor">
-              <img src="/img/light_armor.png" alt="LA" className={styles.pickupIcon} />
-              {player.light_armor_pickups}
-            </span>
-          )}
-          {player.healing > 0 && (
-            <span className={styles.pickupItem} title="Healing">
-              🩺 {player.healing}
-            </span>
-          )}
-        </div>
-      );
-    };
+    const allWeaponNames = new Set<string>();
+    p1?.weapon_stats?.forEach(w => { if (w.damage > 0 || w.kills > 0) allWeaponNames.add(w.weapon_name); });
+    p2?.weapon_stats?.forEach(w => { if (w.damage > 0 || w.kills > 0) allWeaponNames.add(w.weapon_name); });
+
+    const weaponRows = Array.from(allWeaponNames).map(name => {
+      const w1 = p1?.weapon_stats?.find(w => w.weapon_name === name);
+      const w2 = p2?.weapon_stats?.find(w => w.weapon_name === name);
+      return { name, w1, w2, totalDmg: (w1?.damage || 0) + (w2?.damage || 0) };
+    }).sort((a, b) => b.totalDmg - a.totalDmg);
 
     return (
       <article key={post.id} className={`${styles.postCard} ${isNested ? styles.nestedCard : ""}`}>
-        {/* Post Header */}
         {!isNested && (
           <div className={styles.postHeader}>
             <div className={styles.postAuthor}>
@@ -154,18 +112,21 @@ export default function PublicWallPage() {
           </div>
         )}
 
-        {/* Description */}
         {post.description && (
           <p className={styles.postDescription}>{post.description}</p>
         )}
 
-        {/* Score Display */}
+        {/* Score Display with colored DMG/ACC */}
         <div className={styles.scoreDisplay}>
           <div className={`${styles.playerSide} ${p1?.is_winner ? styles.winner : ""}`}>
             <span className={styles.playerNick}>{p1?.player_nick || "?"}</span>
             <div className={styles.playerMiniStats}>
-              <span>DMG {p1?.total_damage || 0}</span>
-              <span>ACC {p1?.accuracy_pct || 0}%</span>
+              <span className={valClass(p1?.total_damage || 0, p2?.total_damage || 0)}>
+                DMG {p1?.total_damage || 0}
+              </span>
+              <span className={valClass(p1?.accuracy_pct || 0, p2?.accuracy_pct || 0)}>
+                ACC {p1?.accuracy_pct || 0}%
+              </span>
             </div>
           </div>
           <div className={styles.scoreBadge}>
@@ -180,44 +141,90 @@ export default function PublicWallPage() {
           <div className={`${styles.playerSide} ${styles.playerRight} ${p2?.is_winner ? styles.winner : ""}`}>
             <span className={styles.playerNick}>{p2?.player_nick || "?"}</span>
             <div className={styles.playerMiniStats}>
-              <span>DMG {p2?.total_damage || 0}</span>
-              <span>ACC {p2?.accuracy_pct || 0}%</span>
+              <span className={valClass(p2?.total_damage || 0, p1?.total_damage || 0)}>
+                DMG {p2?.total_damage || 0}
+              </span>
+              <span className={valClass(p2?.accuracy_pct || 0, p1?.accuracy_pct || 0)}>
+                ACC {p2?.accuracy_pct || 0}%
+              </span>
             </div>
           </div>
         </div>
 
-        {/* Detailed Stats: Pickups + Weapons */}
-        <div className={styles.detailedStats}>
-          <div className={styles.playerDetail}>
-            {renderPlayerPickups(p1)}
-            {renderPlayerWeapons(p1)}
+        {/* Symmetric pickups */}
+        <div className={styles.symSection}>
+          <div className={styles.symRow}>
+            <span className={`${styles.symVal} ${styles.symLeft} ${valClass(p1?.mega_health_pickups || 0, p2?.mega_health_pickups || 0)}`}>
+              {p1?.mega_health_pickups || 0}
+            </span>
+            <img src="/img/mega_health.png" alt="MH" className={styles.symIcon} title="Mega Health" />
+            <span className={`${styles.symVal} ${styles.symRight} ${valClass(p2?.mega_health_pickups || 0, p1?.mega_health_pickups || 0)}`}>
+              {p2?.mega_health_pickups || 0}
+            </span>
           </div>
-          <div className={styles.detailDivider} />
-          <div className={styles.playerDetail}>
-            {renderPlayerPickups(p2)}
-            {renderPlayerWeapons(p2)}
+          <div className={styles.symRow}>
+            <span className={`${styles.symVal} ${styles.symLeft} ${valClass(p1?.heavy_armor_pickups || 0, p2?.heavy_armor_pickups || 0)}`}>
+              {p1?.heavy_armor_pickups || 0}
+            </span>
+            <img src="/img/heavy_armor.png" alt="HA" className={styles.symIcon} title="Heavy Armor" />
+            <span className={`${styles.symVal} ${styles.symRight} ${valClass(p2?.heavy_armor_pickups || 0, p1?.heavy_armor_pickups || 0)}`}>
+              {p2?.heavy_armor_pickups || 0}
+            </span>
+          </div>
+          <div className={styles.symRow}>
+            <span className={`${styles.symVal} ${styles.symLeft} ${valClass(p1?.light_armor_pickups || 0, p2?.light_armor_pickups || 0)}`}>
+              {p1?.light_armor_pickups || 0}
+            </span>
+            <img src="/img/light_armor.png" alt="LA" className={styles.symIcon} title="Light Armor" />
+            <span className={`${styles.symVal} ${styles.symRight} ${valClass(p2?.light_armor_pickups || 0, p1?.light_armor_pickups || 0)}`}>
+              {p2?.light_armor_pickups || 0}
+            </span>
+          </div>
+          <div className={styles.symRow}>
+            <span className={`${styles.symVal} ${styles.symLeft} ${valClass(p1?.healing || 0, p2?.healing || 0)}`}>
+              {p1?.healing || 0}
+            </span>
+            <span className={styles.symLabelIcon}>🩺</span>
+            <span className={`${styles.symVal} ${styles.symRight} ${valClass(p2?.healing || 0, p1?.healing || 0)}`}>
+              {p2?.healing || 0}
+            </span>
           </div>
         </div>
 
-        {/* Screenshot Thumbnail */}
-        {post.screenshot_url && !isNested && (
-          <a
-            href={post.screenshot_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.screenshotLink}
-          >
-            <img
-              src={post.screenshot_url}
-              alt="Match screenshot"
-              className={styles.screenshotImg}
-              loading="lazy"
-            />
-            <span className={styles.screenshotOverlay}>🔍 Pełny screenshot</span>
-          </a>
+        {/* Symmetric weapons */}
+        {weaponRows.length > 0 && (
+          <div className={styles.symSection}>
+            {weaponRows.map((wr, i) => (
+              <div key={i} className={styles.symWeaponRow} title={wr.name}>
+                <span className={`${styles.symWVal} ${styles.symLeft}`}>
+                  <span className={valClass(wr.w1?.damage || 0, wr.w2?.damage || 0)}>{wr.w1?.damage || 0}</span>
+                  <span className={`${styles.symWAcc} ${valClass(wr.w1?.accuracy_pct || 0, wr.w2?.accuracy_pct || 0)}`}>
+                    {wr.w1?.accuracy_pct || 0}%
+                  </span>
+                </span>
+                <img src={wIcon(wr.name)} alt={wr.name} className={styles.symIcon}
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                />
+                <span className={`${styles.symWVal} ${styles.symRight}`}>
+                  <span className={`${styles.symWAcc} ${valClass(wr.w2?.accuracy_pct || 0, wr.w1?.accuracy_pct || 0)}`}>
+                    {wr.w2?.accuracy_pct || 0}%
+                  </span>
+                  <span className={valClass(wr.w2?.damage || 0, wr.w1?.damage || 0)}>{wr.w2?.damage || 0}</span>
+                </span>
+              </div>
+            ))}
+          </div>
         )}
 
-        {/* Reactions */}
+        {/* Screenshot button */}
+        {post.screenshot_url && !isNested && (
+          <div className={styles.postFooter}>
+            <a href={post.screenshot_url} target="_blank" rel="noopener noreferrer" className={styles.screenshotBtn}>
+              📸 Pokaż screen
+            </a>
+          </div>
+        )}
+
         {!isNested && (
           <ReactionBar
             matchId={post.id}
@@ -227,7 +234,6 @@ export default function PublicWallPage() {
           />
         )}
 
-        {/* Comments */}
         {!isNested && (
           <CommentSection
             matchId={post.id}

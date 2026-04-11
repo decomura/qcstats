@@ -36,28 +36,58 @@ export default function ReactionBar({
 
     // Optimistic update
     const wasActive = userReactions.has(type);
-    const newUserReactions = new Set(userReactions);
-    const newReactions = { ...reactions };
 
-    if (wasActive) {
-      newUserReactions.delete(type);
-      newReactions[type] = Math.max(0, (newReactions[type] || 0) - 1);
-    } else {
-      newUserReactions.add(type);
-      newReactions[type] = (newReactions[type] || 0) + 1;
+    setUserReactions(prev => {
+      const next = new Set(prev);
+      if (wasActive) next.delete(type);
+      else next.add(type);
+      return next;
+    });
+
+    setReactions(prev => ({
+      ...prev,
+      [type]: wasActive
+        ? Math.max(0, (prev[type] || 0) - 1)
+        : (prev[type] || 0) + 1,
+    }));
+
+    if (!wasActive) {
       setAnimating(type);
       setTimeout(() => setAnimating(null), 600);
     }
 
-    setUserReactions(newUserReactions);
-    setReactions(newReactions);
-
     // API call
-    const result = await toggleReaction(matchId, type);
-    if (!result) {
-      // Revert on error
-      setUserReactions(userReactions);
-      setReactions(reactions);
+    try {
+      const result = await toggleReaction(matchId, type);
+      if (!result) {
+        // Revert on error using functional updates
+        setUserReactions(prev => {
+          const reverted = new Set(prev);
+          if (wasActive) reverted.add(type);
+          else reverted.delete(type);
+          return reverted;
+        });
+        setReactions(prev => ({
+          ...prev,
+          [type]: wasActive
+            ? (prev[type] || 0) + 1
+            : Math.max(0, (prev[type] || 0) - 1),
+        }));
+      }
+    } catch {
+      // Revert on exception
+      setUserReactions(prev => {
+        const reverted = new Set(prev);
+        if (wasActive) reverted.add(type);
+        else reverted.delete(type);
+        return reverted;
+      });
+      setReactions(prev => ({
+        ...prev,
+        [type]: wasActive
+          ? (prev[type] || 0) + 1
+          : Math.max(0, (prev[type] || 0) - 1),
+      }));
     }
   };
 
