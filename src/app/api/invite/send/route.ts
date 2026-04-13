@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
     await transporter.sendMail({
       from: `"QCStats" <${process.env.GMAIL_USER}>`,
       to: email,
-      subject: `${inviterName} zaprasza Cię do QCStats! 🎮`,
+      subject: `${inviterName} invited you to QCStats! 🎮`,
       html: `
         <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #0a0a14; color: #e0e0e0; border-radius: 16px; overflow: hidden;">
           <div style="background: linear-gradient(135deg, #cc0000, #ff6b00); padding: 32px 24px; text-align: center;">
@@ -64,28 +64,28 @@ export async function POST(request: NextRequest) {
 
           <div style="padding: 32px 24px;">
             <h2 style="color: #ff6b00; margin: 0 0 16px; font-size: 22px;">
-              Zostałeś zaproszony! 🏟️
+              You've been invited! 🏟️
             </h2>
             
             <p style="line-height: 1.6; margin: 0 0 16px; color: #b0b0b0;">
-              <strong style="color: #ff6b00;">${inviterName}</strong> zaprasza Cię do 
-              <strong>QCStats</strong> — platformy śledzenia statystyk Quake Champions.
+              <strong style="color: #ff6b00;">${inviterName}</strong> has invited you to join 
+              <strong>QCStats</strong> — a Quake Champions stats tracking platform.
             </p>
 
             <p style="line-height: 1.6; margin: 0 0 24px; color: #b0b0b0;">
-              Dołącz do zweryfikowanej społeczności graczy. Śledź swoją celność, 
-              damage i pickup-y. Porównuj się z rywalami.
+              Join a verified community of players. Track your accuracy, 
+              damage output, and item control. Compare your stats against rivals.
             </p>
 
             <div style="text-align: center; margin: 32px 0;">
               <a href="${inviteUrl}" 
                  style="display: inline-block; padding: 14px 36px; background: linear-gradient(135deg, #cc0000, #ff6b00); color: white; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 16px; letter-spacing: 0.5px;">
-                ⚡ Dołącz do areny
+                ⚡ Join the Arena
               </a>
             </div>
 
             <p style="font-size: 12px; color: #666; text-align: center; margin: 16px 0 0;">
-              Link ważny przez 7 dni. Jeśli przycisk nie działa, skopiuj ten link:<br/>
+              This link expires in 7 days. If the button doesn't work, copy this link:<br/>
               <a href="${inviteUrl}" style="color: #ff6b00; word-break: break-all;">${inviteUrl}</a>
             </p>
           </div>
