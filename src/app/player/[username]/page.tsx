@@ -78,10 +78,7 @@ export default async function PublicProfilePage({ params }: PageProps) {
       ? Math.round(railStats.reduce((s, w) => s + w.accuracy_pct, 0) / railStats.length)
       : null,
     totalDamage: playerData.reduce((s, m) => s + (m.total_damage || 0), 0),
-    memberSince: new Date(profile.created_at).toLocaleDateString("pl-PL", {
-      month: "long",
-      year: "numeric",
-    }),
+    memberSince: profile.created_at,
   };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

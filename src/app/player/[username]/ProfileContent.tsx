@@ -65,7 +65,7 @@ export default function ProfileContent({ profile, stats, recentMatches }: Props)
           <div className={styles.profileMeta}>
             <span className={styles.username}>@{profile.username}</span>
             <span className={styles.role}>{roleLabel}</span>
-            <span className={styles.since}>Member since {stats.memberSince}</span>
+            <span className={styles.since} suppressHydrationWarning>Member since {new Date(stats.memberSince).toLocaleDateString("en-US", { month: "long", year: "numeric" })}</span>
           </div>
         </div>
       </div>
@@ -110,14 +110,14 @@ export default function ProfileContent({ profile, stats, recentMatches }: Props)
           <div className={styles.matchList}>
             {recentMatches.map((m, i) => {
               const opponent = m.match.match_players.find((p) => p.side !== m.side);
-              const date = new Date(m.match.match_date).toLocaleDateString("pl-PL", {
+              const date = new Date(m.match.match_date).toLocaleDateString("en-US", {
                 day: "2-digit",
                 month: "short",
               });
 
               return (
                 <div key={i} className={styles.matchRow}>
-                  <span className={styles.matchDate}>{date}</span>
+                  <span className={styles.matchDate} suppressHydrationWarning>{date}</span>
                   <span className={`${styles.matchResult} ${m.is_winner ? styles.green : styles.red}`}>
                     {m.is_winner ? "WIN" : "LOSS"}
                   </span>
