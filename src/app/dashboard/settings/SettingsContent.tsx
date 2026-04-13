@@ -15,6 +15,8 @@ interface Profile {
   game_nickname: string | null;
   game_nickname_changed_at: string | null;
   game_nickname_history: { old: string; new: string; date: string }[];
+  invite_code: string | null;
+  invite_count_remaining: number;
 }
 
 interface Props {
@@ -32,6 +34,10 @@ export default function SettingsContent({ profile, email }: Props) {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteSending, setInviteSending] = useState(false);
+  const [inviteMsg, setInviteMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [invitesLeft, setInvitesLeft] = useState(profile?.invite_count_remaining ?? 3);
 
   // Calculate nickname cooldown
   const nicknameCooldown = useMemo(() => {
@@ -115,6 +121,52 @@ export default function SettingsContent({ profile, email }: Props) {
     const supabase = createClient();
     await supabase.auth.signOut();
     window.location.href = "/";
+  };
+
+  const handleSendInvite = async () => {
+    if (!inviteEmail.trim()) return;
+    setInviteSending(true);
+    setInviteMsg(null);
+
+    try {
+      const supabase = createClient();
+
+      // Check remaining invites
+      if (invitesLeft <= 0 && profile?.role !== "admin") {
+        setInviteMsg({ type: "error", text: "Nie masz już dostępnych zaproszeń." });
+        return;
+      }
+
+      // Generate token
+      const token = crypto.randomUUID().replace(/-/g, "").slice(0, 16).toUpperCase();
+      const { error } = await supabase.from("invite_tokens").insert({
+        inviter_id: profile?.id,
+        token,
+        email: inviteEmail.trim(),
+      });
+
+      if (error) {
+        setInviteMsg({ type: "error", text: "Błąd tworzenia zaproszenia: " + error.message });
+        return;
+      }
+
+      // Open mailto
+      const inviterName = profile?.display_name || profile?.username || "Gracz QCStats";
+      const inviteUrl = `${window.location.origin}/login?invite=${token}`;
+      const subject = encodeURIComponent(`${inviterName} zaprasza Cię do QCStats!`);
+      const body = encodeURIComponent(
+        `Cześć!\n\n${inviterName} zaprasza Cię do QCStats — platformy śledzenia statystyk Quake Champions.\n\nKliknij poniższy link aby dołączyć:\n${inviteUrl}\n\nLink ważny przez 7 dni.\n\nDo zobaczenia na arenie! 🎮`
+      );
+      window.open(`mailto:${inviteEmail.trim()}?subject=${subject}&body=${body}`, "_self");
+
+      setInvitesLeft((prev) => Math.max(0, prev - 1));
+      setInviteMsg({ type: "success", text: `Zaproszenie wygenerowane dla ${inviteEmail.trim()}! Otwórz klienta poczty aby wysłać.` });
+      setInviteEmail("");
+    } catch {
+      setInviteMsg({ type: "error", text: "Wystąpił błąd." });
+    } finally {
+      setInviteSending(false);
+    }
   };
 
   return (
@@ -251,6 +303,55 @@ export default function SettingsContent({ profile, email }: Props) {
         <button className={styles.saveBtn} onClick={handleSave} disabled={saving}>
           {saving ? "Zapisywanie..." : "💾 Zapisz zmiany"}
         </button>
+      </div>
+
+      {/* ═══ INVITE SECTION ═══ */}
+      <div className={`${styles.section} ${styles.inviteSection}`}>
+        <h2>📨 Zaproś znajomego</h2>
+        <p className={styles.inviteDesc}>
+          QCStats działa na zaproszeniach. Zaproś swoich przeciwników na arenę!
+        </p>
+
+        <div className={styles.inviteCountBox}>
+          <span className={styles.inviteCountLabel}>Dostępne zaproszenia:</span>
+          <span className={styles.inviteCountValue}>
+            {profile?.role === "admin" ? "∞" : invitesLeft}
+          </span>
+        </div>
+
+        <div className={styles.inviteInputRow}>
+          <input
+            type="email"
+            value={inviteEmail}
+            onChange={(e) => setInviteEmail(e.target.value)}
+            placeholder="email@przeciwnika.pl"
+            className={styles.input}
+            disabled={inviteSending || (invitesLeft <= 0 && profile?.role !== "admin")}
+          />
+          <button
+            className={styles.inviteSendBtn}
+            onClick={handleSendInvite}
+            disabled={inviteSending || !inviteEmail.trim() || (invitesLeft <= 0 && profile?.role !== "admin")}
+          >
+            {inviteSending ? "✈️ Wysyłanie..." : "✈️ Wyślij zaproszenie"}
+          </button>
+        </div>
+
+        {inviteMsg && (
+          <div className={`${styles.message} ${inviteMsg.type === "success" ? styles.messageSuccess : styles.messageError}`}>
+            {inviteMsg.text}
+          </div>
+        )}
+
+        <div className={styles.inviteHowItWorks}>
+          <strong>Jak to działa?</strong>
+          <ol>
+            <li>Wpisz email przeciwnika</li>
+            <li>Otworzy się Twój klient poczty z gotowym zaproszeniem</li>
+            <li>Wyślij email — link zaproszeniowy jest ważny 7 dni</li>
+            <li>Po rejestracji automatycznie stajecie się znajomymi!</li>
+          </ol>
+        </div>
       </div>
 
       <div className={styles.dangerZone}>

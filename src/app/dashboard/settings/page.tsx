@@ -18,7 +18,7 @@ export default async function SettingsPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("*, game_nickname, game_nickname_changed_at, game_nickname_history")
+    .select("*, game_nickname, game_nickname_changed_at, game_nickname_history, invite_code, invite_count_remaining")
     .eq("id", user.id)
     .single();
 
