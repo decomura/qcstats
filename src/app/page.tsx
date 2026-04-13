@@ -39,13 +39,13 @@ export default function LandingPage() {
 
           <div className={styles.heroActions}>
             <a href="/login" className="btn btn-primary btn-lg" id="cta-get-started">
-              ⚡ Get Started
+              ⚡ Dołącz do areny
             </a>
             <a href="/wall" className="btn btn-secondary btn-lg" id="cta-community-wall">
               🏟️ Community Wall
             </a>
-            <a href="#how-it-works" className="btn btn-secondary btn-lg" id="cta-how-works">
-              How It Works
+            <a href="#jak-to-dziala" className="btn btn-secondary btn-lg" id="cta-how-works">
+              Jak to działa?
             </a>
           </div>
 
@@ -59,12 +59,12 @@ export default function LandingPage() {
               <div className={styles.statsStripLabel}>Stats Per Match</div>
             </div>
             <div className={styles.statsStripItem}>
-              <div className={styles.statsStripValue}>OCR</div>
-              <div className={styles.statsStripLabel}>Auto-Detection</div>
+              <div className={styles.statsStripValue}>AI</div>
+              <div className={styles.statsStripLabel}>Gemini Vision OCR</div>
             </div>
             <div className={styles.statsStripItem}>
-              <div className={styles.statsStripValue}>$0</div>
-              <div className={styles.statsStripLabel}>Forever Free</div>
+              <div className={styles.statsStripValue}>🔒</div>
+              <div className={styles.statsStripLabel}>Invite-Only</div>
             </div>
           </div>
         </div>
@@ -79,20 +79,20 @@ export default function LandingPage() {
 
         <div className={styles.featuresGrid}>
           <div className={styles.featureCard}>
-            <span className={styles.featureIcon}>📸</span>
-            <h3 className={styles.featureTitle}>Screenshot OCR</h3>
+            <span className={styles.featureIcon}>🤖</span>
+            <h3 className={styles.featureTitle}>AI Screenshot OCR</h3>
             <p className={styles.featureDesc}>
-              Paste your post-match screenshot with Ctrl+V. Our engine detects
-              all weapon stats, accuracy, damage, and frags automatically.
+              Wklej screenshot z Ctrl+V lub przeciągnij. Gemini Vision AI
+              odczytuje wszystkie staty, bronie, celność i damage automatycznie.
             </p>
           </div>
 
           <div className={styles.featureCard}>
             <span className={styles.featureIcon}>📊</span>
-            <h3 className={styles.featureTitle}>Deep Analytics</h3>
+            <h3 className={styles.featureTitle}>Analityka</h3>
             <p className={styles.featureDesc}>
-              Track LG accuracy, Railgun precision, DPM, K/D ratio, and item
-              control percentage over time with detailed charts.
+              Śledź celność LG, precyzję Railguna, DPM, K/D i kontrolę
+              itemów na przestrzeni czasu ze szczegółowymi wykresami.
             </p>
           </div>
 
@@ -100,82 +100,123 @@ export default function LandingPage() {
             <span className={styles.featureIcon}>⚔️</span>
             <h3 className={styles.featureTitle}>Head-to-Head</h3>
             <p className={styles.featureDesc}>
-              Compare your stats against any rival. See match history,
-              win rates, and weapon performance in direct confrontation.
-            </p>
-          </div>
-
-          <div className={styles.featureCard}>
-            <span className={styles.featureIcon}>👥</span>
-            <h3 className={styles.featureTitle}>Friends &amp; Rivals</h3>
-            <p className={styles.featureDesc}>
-              Add friends, get notified about their matches, and build your
-              competitive network within the community.
-            </p>
-          </div>
-
-          <div className={styles.featureCard}>
-            <span className={styles.featureIcon}>🏆</span>
-            <h3 className={styles.featureTitle}>Rankings</h3>
-            <p className={styles.featureDesc}>
-              Opt-in global rankings. See where you stand in accuracy,
-              damage output, and win rate among all registered players.
+              Porównaj się z każdym rywalem. Historia meczów, win rate
+              i statystyki broni w bezpośredniej konfrontacji.
             </p>
           </div>
 
           <div className={styles.featureCard}>
             <span className={styles.featureIcon}>🔒</span>
-            <h3 className={styles.featureTitle}>Privacy First</h3>
+            <h3 className={styles.featureTitle}>Zamknięta Społeczność</h3>
             <p className={styles.featureDesc}>
-              Your stats, your rules. Choose to be public or keep your profile
-              private. Full control over your data with CSV/JSON export.
+              Rejestracja tylko na zaproszenie. Żadnych fake kont,
+              żadnych trolli. Weryfikacja nicku ze screena zapewnia autentyczność.
+            </p>
+          </div>
+
+          <div className={styles.featureCard}>
+            <span className={styles.featureIcon}>🌳</span>
+            <h3 className={styles.featureTitle}>Drzewko Zaproszeń</h3>
+            <p className={styles.featureDesc}>
+              Każdy gracz widzi kto kogo zaprosił. Przejrzysta społeczność
+              oparta na rekomendacjach — widzisz jak ktoś się tutaj znalazł.
+            </p>
+          </div>
+
+          <div className={styles.featureCard}>
+            <span className={styles.featureIcon}>🎮</span>
+            <h3 className={styles.featureTitle}>Tylko Duel 1v1</h3>
+            <p className={styles.featureDesc}>
+              Skupieni na trybie duel. AI automatycznie rozpoznaje i odrzuca
+              screeny z TDM, FFA czy Instagib. Czyste statystyki 1v1.
             </p>
           </div>
         </div>
       </section>
 
       {/* ═══════════ HOW IT WORKS ═══════════ */}
-      <section className={styles.howItWorks} id="how-it-works">
+      <section className={styles.howItWorks} id="jak-to-dziala">
         <div className={styles.featuresHeader}>
-          <div className={styles.sectionLabel}>// Process</div>
-          <h2 className={styles.sectionTitle}>How It Works</h2>
+          <div className={styles.sectionLabel}>// Jak to działa</div>
+          <h2 className={styles.sectionTitle}>Od zaproszenia do analizy</h2>
         </div>
 
         <div className={styles.steps}>
           <div className={styles.step}>
             <div className={styles.stepNumber}>01</div>
-            <h3 className={styles.stepTitle}>Play a Duel</h3>
+            <h3 className={styles.stepTitle}>Otrzymaj zaproszenie</h3>
             <p className={styles.stepDesc}>
-              Finish your duel match in Quake Champions. Take a screenshot of
-              the RANKING results screen.
+              QCStats działa na zaproszeniach. Poproś kogoś ze społeczności
+              o link&nbsp;— otrzymasz go mailem. Kliknij i zarejestruj się.
             </p>
           </div>
 
           <div className={styles.step}>
             <div className={styles.stepNumber}>02</div>
-            <h3 className={styles.stepTitle}>Paste Screenshot</h3>
+            <h3 className={styles.stepTitle}>Ustaw ksywkę</h3>
             <p className={styles.stepDesc}>
-              Hit Ctrl+V on QCStats or drag & drop your screenshot.
-              Our OCR engine reads the data in seconds.
+              W ustawieniach wpisz swoją ksywkę z Quake Champions — dokładnie
+              taką jak w grze. System ją weryfikuje na każdym screenie.
             </p>
           </div>
 
           <div className={styles.step}>
             <div className={styles.stepNumber}>03</div>
-            <h3 className={styles.stepTitle}>Review & Save</h3>
+            <h3 className={styles.stepTitle}>Wrzuć screenshot</h3>
             <p className={styles.stepDesc}>
-              Preview detected stats, correct if needed, and confirm.
-              Match is saved to your profile and your opponent&apos;s.
+              Ctrl+V lub drag&amp;drop screena z wynikami duelu. Gemini AI
+              odczytuje staty, sprawdza Twoją ksywkę i tryb gry automatycznie.
             </p>
           </div>
 
           <div className={styles.step}>
             <div className={styles.stepNumber}>04</div>
-            <h3 className={styles.stepTitle}>Analyze & Improve</h3>
+            <h3 className={styles.stepTitle}>Analizuj i zapraszaj</h3>
             <p className={styles.stepDesc}>
-              Track your progress over time. See trends, compare against
-              rivals, and dominate the arena.
+              Śledź swój progres, porównuj się z rywalami. Zaproś przeciwnika
+              do QCStats — razem budujecie zweryfikowaną społeczność.
             </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════ TRUST SYSTEM ═══════════ */}
+      <section className={styles.trustSection}>
+        <div className={styles.featuresHeader}>
+          <div className={styles.sectionLabel}>// Bezpieczeństwo</div>
+          <h2 className={styles.sectionTitle}>Zweryfikowana Społeczność</h2>
+        </div>
+
+        <div className={styles.trustGrid}>
+          <div className={styles.trustCard}>
+            <div className={styles.trustIcon}>📨</div>
+            <h3>Invite-Only</h3>
+            <p>Każdy gracz musi być zaproszony przez kogoś kto już jest w społeczności. Żadnych anonimowych rejestracji.</p>
+          </div>
+          <div className={styles.trustCard}>
+            <div className={styles.trustIcon}>🎯</div>
+            <h3>Weryfikacja Ksywki</h3>
+            <p>Twoja ksywka musi odpowiadać tej na screenie. AI z tolerancją na błędy OCR sprawdza to automatycznie.</p>
+          </div>
+          <div className={styles.trustCard}>
+            <div className={styles.trustIcon}>🌳</div>
+            <h3>Drzewko Zaproszeń</h3>
+            <p>Publiczne drzewko pokazuje kto kogo zaprosił. Widzisz skąd każdy gracz przyszedł — pełna transparentność.</p>
+          </div>
+          <div className={styles.trustCard}>
+            <div className={styles.trustIcon}>🤖</div>
+            <h3>Detekcja Trybu</h3>
+            <p>AI rozpoznaje tryb gry na screenie. Tylko screeny z dueli 1v1 są akceptowane — TDM, FFA i inne są odrzucane.</p>
+          </div>
+          <div className={styles.trustCard}>
+            <div className={styles.trustIcon}>⏳</div>
+            <h3>Cooldown Ksywki</h3>
+            <p>Zmiana ksywki raz na 30 dni. Zapobiega podszywaniu się pod innych graczy i manipulacji statystykami.</p>
+          </div>
+          <div className={styles.trustCard}>
+            <div className={styles.trustIcon}>👥</div>
+            <h3>Ograniczone Zaproszenia</h3>
+            <p>Każdy gracz ma limit zaproszeń. Zachęca do zapraszania tylko zaufanych graczy — nie trolli.</p>
           </div>
         </div>
       </section>

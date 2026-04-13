@@ -313,6 +313,65 @@
   }
 }
 
+/* ---- Trust/Security Section ---- */
+.trustSection {
+  padding: var(--space-3xl) var(--space-xl);
+  position: relative;
+}
+
+.trustSection::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0, 204, 102, 0.4), transparent);
+}
+
+.trustGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: var(--space-lg);
+  max-width: var(--container-max);
+  margin: var(--space-2xl) auto 0;
+}
+
+.trustCard {
+  padding: var(--space-lg);
+  background: rgba(0, 204, 102, 0.02);
+  border: 1px solid rgba(0, 204, 102, 0.1);
+  border-radius: var(--radius-lg);
+  transition: all var(--transition-base);
+  text-align: center;
+}
+
+.trustCard:hover {
+  border-color: rgba(0, 204, 102, 0.3);
+  box-shadow: 0 0 20px rgba(0, 204, 102, 0.08);
+  transform: translateY(-2px);
+}
+
+.trustIcon {
+  font-size: 2rem;
+  margin-bottom: var(--space-sm);
+}
+
+.trustCard h3 {
+  font-family: var(--font-heading);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--accent-green);
+  margin-bottom: var(--space-xs);
+}
+
+.trustCard p {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0;
+}
+
 /* ---- Weapons Section ---- */
 .weaponsSection {
   padding: var(--space-3xl) var(--space-xl);
