@@ -143,7 +143,8 @@ export async function POST(request: NextRequest) {
       ],
       generationConfig: {
         temperature: 0.1, // Low temperature for factual extraction
-        maxOutputTokens: 4096,
+        maxOutputTokens: 8192,
+        responseMimeType: "application/json",
       },
     });
 
@@ -195,7 +196,35 @@ export async function POST(request: NextRequest) {
       jsonStr = jsonStr.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, "");
     }
 
-    const parsed = JSON.parse(jsonStr);
+    let parsed;
+    try {
+      parsed = JSON.parse(jsonStr);
+    } catch {
+      // Attempt to recover truncated JSON by closing open brackets
+      console.warn("[OCR API] JSON parse failed, attempting recovery...");
+      let recovered = jsonStr;
+      // Count unclosed brackets
+      const openBraces = (recovered.match(/{/g) || []).length;
+      const closeBraces = (recovered.match(/}/g) || []).length;
+      const openBrackets = (recovered.match(/\[/g) || []).length;
+      const closeBrackets = (recovered.match(/\]/g) || []).length;
+
+      // Remove trailing comma or incomplete value
+      recovered = recovered.replace(/,\s*$/, "");
+      recovered = recovered.replace(/,\s*"[^"]*"\s*:\s*$/, "");
+      recovered = recovered.replace(/:\s*"[^"]*$/, ': ""');
+
+      // Close brackets
+      for (let i = 0; i < openBrackets - closeBrackets; i++) recovered += "]";
+      for (let i = 0; i < openBraces - closeBraces; i++) recovered += "}";
+
+      try {
+        parsed = JSON.parse(recovered);
+        console.log("[OCR API] JSON recovery successful");
+      } catch (e2) {
+        throw new Error(`JSON parse failed even after recovery: ${(e2 as Error).message}`);
+      }
+    }
 
     // Check if Gemini detected a non-duel game mode
     if (parsed.isDuel === false) {
