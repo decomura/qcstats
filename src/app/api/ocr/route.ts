@@ -17,11 +17,29 @@ const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GE
 
 const SYSTEM_PROMPT = `You are an OCR system specialized in reading Quake Champions (QC) post-match statistics screenshots.
 
-The screenshot shows a DUEL mode results screen with two players' statistics.
+FIRST, determine the game mode shown in the screenshot. Quake Champions has these modes:
+- DUEL: 1v1, shows exactly 2 players with detailed weapon stats, pickup stats, and individual scores
+- TDM (Team Deathmatch): 4v4, shows team rosters with multiple players per side
+- DM (Deathmatch/FFA): 4-8 players listed in a scoreboard
+- CTF: teams with flag capture stats
+- Sacrifice: teams with obelisk stats
+- Instagib: special mode with one-hit kills
+- Unholy Trinity: limited weapon pool
 
-Extract ALL data and return ONLY a valid JSON object (no markdown, no code blocks, just raw JSON) with this exact structure:
+Key indicators of DUEL mode:
+- Exactly 2 player stat columns (left vs right)
+- Detailed per-weapon breakdown (Gauntlet through Tribolt)
+- Pickup stats (Mega Health, Heavy Armor, Light Armor)
+- Individual healing, damage, accuracy
+
+If the screenshot is NOT from a DUEL match, return ONLY this JSON:
+{ "gameMode": "<detected mode>", "isDuel": false, "reason": "<why it's not duel>" }
+
+If the screenshot IS from a DUEL match, return a JSON object with this structure:
 
 {
+  "gameMode": "duel",
+  "isDuel": true,
   "player1": {
     "nick": "string (left player's nickname, exact as shown)",
     "score": 0,
@@ -76,6 +94,7 @@ IMPORTANT RULES:
 - hitsShots format is "hits/shots" (e.g., "305/798")
 - If a value is not visible or unclear, use 0 for numbers and "" for strings
 - Percentages should be numbers only (no % sign), e.g., 38 not "38%"
+- If the image is NOT a Quake Champions screenshot at all, return: { "gameMode": "unknown", "isDuel": false, "reason": "Not a Quake Champions screenshot" }
 - Return ONLY the JSON, nothing else`;
 
 export async function POST(request: NextRequest) {
@@ -177,6 +196,17 @@ export async function POST(request: NextRequest) {
     }
 
     const parsed = JSON.parse(jsonStr);
+
+    // Check if Gemini detected a non-duel game mode
+    if (parsed.isDuel === false) {
+      const detectedMode = parsed.gameMode || "unknown";
+      const reason = parsed.reason || "";
+      return NextResponse.json({
+        success: false,
+        error: `Ten screenshot nie jest z trybu DUEL (wykryto: ${detectedMode}). ${reason}. QCStats obsługuje wyłącznie tryb Duel 1v1.`,
+        detectedMode,
+      }, { status: 422 });
+    }
 
     return NextResponse.json({ success: true, data: parsed });
   } catch (err) {
