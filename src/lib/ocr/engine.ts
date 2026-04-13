@@ -183,6 +183,38 @@ function fileToDataUrl(file: File): Promise<string> {
   });
 }
 
+/**
+ * Compress an image to reduce payload size for API calls.
+ * Resizes to max 1920px width and converts to JPEG at 0.8 quality.
+ * Typical 5MB PNG → ~500KB JPEG.
+ */
+function compressImage(dataUrl: string, maxWidth = 1920, quality = 0.8): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      let { width, height } = img;
+
+      // Only downscale, never upscale
+      if (width > maxWidth) {
+        height = Math.round((height * maxWidth) / width);
+        width = maxWidth;
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return reject(new Error("Canvas context failed"));
+
+      ctx.drawImage(img, 0, 0, width, height);
+      const compressed = canvas.toDataURL("image/jpeg", quality);
+      resolve(compressed);
+    };
+    img.onerror = () => reject(new Error("Failed to load image for compression"));
+    img.src = dataUrl;
+  });
+}
+
 // =====================================================
 // GEMINI OCR ENGINE
 // =====================================================
@@ -202,13 +234,17 @@ export async function processScreenshot(
 
   report("loading", 5, "Przygotowywanie screenshota...");
 
-  // Get base64 from canvas if no file provided
+  // Get base64 from canvas or file
   let dataUrl: string;
   if (imageFile) {
     dataUrl = await fileToDataUrl(imageFile);
   } else {
     dataUrl = _canvas.toDataURL("image/png");
   }
+
+  // Compress to reduce payload size (prevents 413 errors)
+  report("loading", 10, "Kompresja obrazu...");
+  dataUrl = await compressImage(dataUrl);
 
   report("ocr", 20, "Wysyłanie do Gemini Vision AI...");
 
