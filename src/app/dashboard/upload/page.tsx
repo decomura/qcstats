@@ -10,7 +10,7 @@ import {
   type OCRProgress,
 } from "@/lib/ocr/engine";
 import { drawDebugOverlay } from "@/lib/ocr/debug";
-import { saveMatch, createMatchGroup, type SaveMatchResult, type NickAnalysisResult } from "@/lib/services/matches";
+import { saveMatch, createMatchGroup, validateGameNickname, getUserGameNickname, type SaveMatchResult, type NickAnalysisResult, type NicknameValidationResult } from "@/lib/services/matches";
 import { createClient } from "@/lib/supabase/client";
 import styles from "./upload.module.css";
 
@@ -46,11 +46,36 @@ export default function UploadPage() {
   const [publishToWall, setPublishToWall] = useState(true);
   const [funnyMessage, setFunnyMessage] = useState("");
   const funnyIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Game nickname validation state
+  const [gameNickname, setGameNicknameState] = useState<string | null>(null);
+  const [nicknameValidation, setNicknameValidation] = useState<NicknameValidationResult | null>(null);
+  const [nicknameChecking, setNicknameChecking] = useState(true);
+  // Invite opponent modal state
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteOpponentNick, setInviteOpponentNick] = useState("");
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteSending, setInviteSending] = useState(false);
+  const [inviteSent, setInviteSent] = useState(false);
   // Bulk upload state
   const [bulkItems, setBulkItems] = useState<BulkItem[]>([]);
   const [bulkPublishAsGroup, setBulkPublishAsGroup] = useState(true);
   const [bulkPublishToWall, setBulkPublishToWall] = useState(true);
   const [bulkDescription, setBulkDescription] = useState("");
+
+  // Check game nickname on mount
+  useEffect(() => {
+    const checkNickname = async () => {
+      setNicknameChecking(true);
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const nick = await getUserGameNickname(user.id);
+        setGameNicknameState(nick);
+      }
+      setNicknameChecking(false);
+    };
+    checkNickname();
+  }, []);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -269,7 +294,25 @@ export default function UploadPage() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        setError("You must be logged in to save matches.");
+        setError("Musisz być zalogowany, żeby zapisać mecz.");
+        setStage("error");
+        return;
+      }
+
+      // Validate game nickname against OCR results
+      const validation = await validateGameNickname(
+        user.id,
+        result.player1.nick,
+        result.player2.nick
+      );
+      setNicknameValidation(validation);
+
+      if (!validation.valid) {
+        if (validation.error === "NICKNAME_NOT_SET") {
+          setError("Musisz ustawić ksywkę w grze (Game Nickname) w Ustawieniach zanim będziesz mógł zapisywać mecze.");
+        } else {
+          setError(`Twoja ksywka \"${gameNickname}\" nie została znaleziona na screenie. Na screenie widoczni są: \"${result.player1.nick}\" i \"${result.player2.nick}\". Możesz zapisywać tylko własne mecze.`);
+        }
         setStage("error");
         return;
       }
@@ -277,13 +320,13 @@ export default function UploadPage() {
       const saveResult = await saveMatch(result, imageFile, user.id, undefined, description, publishToWall);
 
       if (saveResult.isDuplicate) {
-        setError("This match already exists in the database. Duplicate detected!");
+        setError("Ten mecz już istnieje w bazie danych. Wykryto duplikat!");
         setStage("error");
         return;
       }
 
       if (!saveResult.success) {
-        setError(saveResult.error || "Failed to save match.");
+        setError(saveResult.error || "Nie udało się zapisać meczu.");
         setStage("error");
         return;
       }
@@ -303,12 +346,51 @@ export default function UploadPage() {
 
       setStage("saved");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Save failed");
+      setError(err instanceof Error ? err.message : "Zapis nie powiódł się");
       setStage("error");
     } finally {
       setIsSaving(false);
     }
-  }, [result, imageFile, publishToWall, description]);
+  }, [result, imageFile, publishToWall, description, gameNickname]);
+
+  // Send email invite to opponent
+  const handleSendInvite = useCallback(async () => {
+    if (!inviteEmail.trim() || !inviteEmail.includes("@")) return;
+    setInviteSending(true);
+
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Create invite token
+      const token = crypto.randomUUID().replace(/-/g, "").slice(0, 16).toUpperCase();
+      await supabase.from("invite_tokens").insert({
+        inviter_id: user.id,
+        token,
+        email: inviteEmail.trim().toLowerCase(),
+      });
+
+      // Open mailto with invite
+      const inviteUrl = `${window.location.origin}/login?invite=${token}`;
+      const subject = encodeURIComponent("Dołącz do QCStats! 🎮");
+      const body = encodeURIComponent(
+        `Hej ${inviteOpponentNick}!\n\nZapraszam Cię do QCStats - platformy do śledzenia statystyk z Quake Champions.\n\nTwój osobisty link zaproszenia:\n${inviteUrl}\n\nDo zobaczenia na arenie! ⚡`
+      );
+      window.open(`mailto:${inviteEmail.trim()}?subject=${subject}&body=${body}`);
+
+      setInviteSent(true);
+      setTimeout(() => {
+        setShowInviteModal(false);
+        setInviteSent(false);
+        setInviteEmail("");
+      }, 3000);
+    } catch (err) {
+      console.error("Invite send error:", err);
+    } finally {
+      setInviteSending(false);
+    }
+  }, [inviteEmail, inviteOpponentNick]);
 
   return (
     <div className={styles.uploadPage}>
@@ -316,12 +398,34 @@ export default function UploadPage() {
         📸 <span>Upload</span> Screenshot
       </h1>
       <p className={styles.subtitle}>
-        Drop your QC ranking screenshot and let the OCR engine extract your
-        stats
+        Wrzuć screenshot z meczu QC — OCR wyciągnie Twoje statystyki
       </p>
 
+      {/* ─── Game Nickname Guard ─── */}
+      {!nicknameChecking && !gameNickname && stage === "idle" && (
+        <div className={styles.nicknameGuard}>
+          <span style={{ fontSize: "2.5rem" }}>⚠️</span>
+          <h3>Ustaw ksywkę w grze</h3>
+          <p>
+            Zanim będziesz mógł uploadować screenshoty, musisz ustawić swoją <strong>ksywkę z Quake Champions</strong> w ustawieniach.
+            System weryfikuje, czy Twoja ksywka znajduje się na screenie — to zabezpieczenie przed fake’ami.
+          </p>
+          <a href="/dashboard/settings" className={styles.btnSave} style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", marginTop: "1rem" }}>
+            ⚙️ Przejdź do Ustawień
+          </a>
+        </div>
+      )}
+
+      {/* ─── Nickname Badge ─── */}
+      {gameNickname && stage === "idle" && (
+        <div className={styles.nicknameBadge}>
+          🎮 Twoja ksywka: <strong>{gameNickname}</strong>
+          <span className={styles.nicknameBadgeHint}>— ta ksywka musi być widoczna na screenie</span>
+        </div>
+      )}
+
       {/* ─── Drop Zone ─── */}
-      {stage === "idle" && (
+      {stage === "idle" && gameNickname && (
         <div
           className={`${styles.dropZone} ${isDragging ? styles.dropZoneDragging : ""}`}
           onDrop={handleDrop}
@@ -330,18 +434,18 @@ export default function UploadPage() {
           onClick={() => fileInputRef.current?.click()}
         >
           <span className={styles.dropZoneIcon}>🎯</span>
-          <h3 className={styles.dropZoneTitle}>Drop Screenshot Here</h3>
+          <h3 className={styles.dropZoneTitle}>Upuść screenshot tutaj</h3>
 
           <div className={styles.dropZoneMethods}>
             <div className={styles.method}>
-              <kbd>Ctrl</kbd>+<kbd>V</kbd> Paste
+              <kbd>Ctrl</kbd>+<kbd>V</kbd> Wklej
             </div>
-            <div className={styles.method}>🖱️ Drag &amp; Drop</div>
-            <div className={styles.method}>📁 Choose File</div>
+            <div className={styles.method}>🖱️ Przeciągnij</div>
+            <div className={styles.method}>📁 Wybierz plik</div>
           </div>
 
           <p className={styles.dropZoneHint}>
-            Supports PNG, JPG • QC Ranking tab (16:9)
+            Obsługiwane formaty: PNG, JPG • Tab rankingowy z QC (16:9)
           </p>
 
           <input
@@ -641,11 +745,18 @@ export default function UploadPage() {
           <div style={{ textAlign: "center" }}>
             <span style={{ fontSize: "3rem" }}>🎉</span>
             <h2 style={{ fontFamily: "var(--font-display)", color: "var(--accent-green)", marginTop: "1rem" }}>
-              MATCH SAVED!
+              MECZ ZAPISANY!
             </h2>
             <p style={{ color: "var(--text-secondary)", margin: "0.5rem 0" }}>
-              Your duel has been recorded in the database.
+              Twój duel został zapisany w bazie danych.
             </p>
+
+            {/* Nickname validation info */}
+            {nicknameValidation && !nicknameValidation.exact && nicknameValidation.valid && (
+              <div className={styles.fuzzyMatchWarning}>
+                ⚠️ Twoja ksywka została dopasowana z drobną różnicą (odległość: {nicknameValidation.distance}). Jeśli to błąd OCR, możesz to zignorować.
+              </div>
+            )}
           </div>
 
           {/* Nick Analysis Panel */}
@@ -666,19 +777,15 @@ export default function UploadPage() {
                   ) : (
                     <span className={styles.nickStatus}>
                       ❌ Nie znaleziony w systemie
-                      {inviteCode && (
-                        <button
-                          className={styles.inviteBtn}
-                          onClick={() => {
-                            const url = `${window.location.origin}/login?invite=${inviteCode}`;
-                            navigator.clipboard.writeText(url);
-                            setCopiedInvite(true);
-                            setTimeout(() => setCopiedInvite(false), 3000);
-                          }}
-                        >
-                          {copiedInvite ? "✅ Skopiowano!" : `📨 Zaproś ${p.nick}`}
-                        </button>
-                      )}
+                      <button
+                        className={styles.inviteBtn}
+                        onClick={() => {
+                          setInviteOpponentNick(p.nick);
+                          setShowInviteModal(true);
+                        }}
+                      >
+                        📨 Zaproś {p.nick}
+                      </button>
                     </span>
                   )}
                 </div>
@@ -687,13 +794,60 @@ export default function UploadPage() {
           )}
 
           <div className={styles.previewActions} style={{ justifyContent: "center", marginTop: "1.5rem" }}>
-            <button className={styles.btnCancel} onClick={reset}>📸 Upload Another</button>
+            <button className={styles.btnCancel} onClick={reset}>📸 Kolejny upload</button>
             <a href="/wall" className={styles.btnCancel} style={{ textDecoration: "none", display: "inline-flex", alignItems: "center" }}>
               🏟️ Wall
             </a>
             <a href="/dashboard" className={styles.btnSave} style={{ textDecoration: "none", display: "inline-flex", alignItems: "center" }}>
               📊 Dashboard
             </a>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Invite Modal ─── */}
+      {showInviteModal && (
+        <div className={styles.modalOverlay} onClick={() => setShowInviteModal(false)}>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <h3 className={styles.modalTitle}>
+              📨 Zaproś “{inviteOpponentNick}” do QCStats
+            </h3>
+            <p className={styles.modalDesc}>
+              Podaj email przeciwnika. Zaproszenie zostanie wysłane na ten adres.
+              Nie można udostępnić linku zaproszenia publicznie.
+            </p>
+            <div className={styles.modalInputGroup}>
+              <label>Email przeciwnika:</label>
+              <input
+                type="email"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                placeholder="gracz@gmail.com"
+                className={styles.modalInput}
+                autoFocus
+              />
+            </div>
+            {inviteSent ? (
+              <div className={styles.inviteSentMsg}>
+                ✅ Zaproszenie wysłane! Klient pocztowy powinien się otworzyć.
+              </div>
+            ) : (
+              <div className={styles.modalActions}>
+                <button
+                  className={styles.btnCancel}
+                  onClick={() => setShowInviteModal(false)}
+                >
+                  Anuluj
+                </button>
+                <button
+                  className={styles.btnSave}
+                  onClick={handleSendInvite}
+                  disabled={inviteSending || !inviteEmail.includes("@")}
+                >
+                  {inviteSending ? "Wysyłanie..." : "📨 Wyślij zaproszenie"}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

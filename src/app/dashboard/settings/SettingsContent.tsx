@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import styles from "./settings.module.css";
 
@@ -12,6 +12,9 @@ interface Profile {
   is_public: boolean;
   role: string;
   locale: string;
+  game_nickname: string | null;
+  game_nickname_changed_at: string | null;
+  game_nickname_history: { old: string; new: string; date: string }[];
 }
 
 interface Props {
@@ -19,13 +22,34 @@ interface Props {
   email: string;
 }
 
+const NICKNAME_COOLDOWN_DAYS = 30;
+
 export default function SettingsContent({ profile, email }: Props) {
   const [username, setUsername] = useState(profile?.username || "");
   const [displayName, setDisplayName] = useState(profile?.display_name || "");
+  const [gameNickname, setGameNickname] = useState(profile?.game_nickname || "");
   const [isPublic, setIsPublic] = useState(profile?.is_public ?? true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
+
+  // Calculate nickname cooldown
+  const nicknameCooldown = useMemo(() => {
+    if (!profile?.game_nickname_changed_at) return null;
+    const changedAt = new Date(profile.game_nickname_changed_at);
+    const cooldownEnd = new Date(changedAt.getTime() + NICKNAME_COOLDOWN_DAYS * 24 * 60 * 60 * 1000);
+    const now = new Date();
+    if (now >= cooldownEnd) return null;
+    const daysLeft = Math.ceil((cooldownEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    return {
+      daysLeft,
+      endDate: cooldownEnd.toLocaleDateString("pl-PL", { day: "numeric", month: "long", year: "numeric" }),
+    };
+  }, [profile?.game_nickname_changed_at]);
+
+  const isNicknameLocked = !!nicknameCooldown && !!profile?.game_nickname;
+  const isAdmin = profile?.role === "admin";
+  const nicknameChanged = gameNickname.trim() !== (profile?.game_nickname || "");
 
   const handleSave = async () => {
     setSaving(true);
@@ -33,26 +57,54 @@ export default function SettingsContent({ profile, email }: Props) {
 
     try {
       const supabase = createClient();
+
+      // Build update payload
+      const updatePayload: Record<string, unknown> = {
+        username: username.trim(),
+        display_name: displayName.trim(),
+        is_public: isPublic,
+      };
+
+      // Handle game_nickname change
+      if (nicknameChanged && !isNicknameLocked) {
+        const newNick = gameNickname.trim();
+        if (newNick) {
+          // Build history entry
+          const history = profile?.game_nickname_history || [];
+          if (profile?.game_nickname) {
+            history.push({
+              old: profile.game_nickname,
+              new: newNick,
+              date: new Date().toISOString(),
+            });
+          }
+
+          updatePayload.game_nickname = newNick;
+          updatePayload.game_nickname_changed_at = new Date().toISOString();
+          updatePayload.game_nickname_history = history;
+        }
+      }
+
       const { error } = await supabase
         .from("profiles")
-        .update({
-          username: username.trim(),
-          display_name: displayName.trim(),
-          is_public: isPublic,
-        })
+        .update(updatePayload)
         .eq("id", profile?.id);
 
       if (error) {
         if (error.code === "23505") {
-          setMessage({ type: "error", text: "This username is already taken." });
+          if (error.message?.includes("game_nickname")) {
+            setMessage({ type: "error", text: "Ta ksywka jest już zajęta przez innego gracza." });
+          } else {
+            setMessage({ type: "error", text: "Ta nazwa użytkownika jest już zajęta." });
+          }
         } else {
           setMessage({ type: "error", text: error.message });
         }
       } else {
-        setMessage({ type: "success", text: "Profile saved successfully!" });
+        setMessage({ type: "success", text: "Profil zapisany! ✅" });
       }
     } catch {
-      setMessage({ type: "error", text: "Failed to save profile." });
+      setMessage({ type: "error", text: "Nie udało się zapisać profilu." });
     } finally {
       setSaving(false);
     }
@@ -71,35 +123,96 @@ export default function SettingsContent({ profile, email }: Props) {
         ⚙️ <span className={styles.accent}>Profile</span> Settings
       </h1>
 
-      <div className={styles.section}>
-        <h2>Account</h2>
-        <div className={styles.field}>
-          <label>Email</label>
-          <input type="email" value={email} disabled className={styles.inputDisabled} />
-          <span className={styles.hint}>Email cannot be changed.</span>
+      {/* ═══ GAME NICKNAME SECTION ═══ */}
+      <div className={`${styles.section} ${styles.gameNicknameSection}`}>
+        <h2>🎮 Ksywka w grze (Game Nickname)</h2>
+        <div className={styles.gameNicknameWarning}>
+          <span className={styles.warningIcon}>⚠️</span>
+          <div>
+            <strong>WAŻNE:</strong> Ta ksywka MUSI odpowiadać Twojej ksywce widocznej na screenshotach z Quake Champions.
+            System weryfikuje nicki na screenie — jeśli Twoja ksywka nie zostanie znaleziona, nie będziesz mógł zapisać meczu.
+          </div>
         </div>
 
         <div className={styles.field}>
-          <label>Username</label>
+          <label>Ksywka w QC</label>
+          {isNicknameLocked && !isAdmin ? (
+            <>
+              <input
+                type="text"
+                value={gameNickname}
+                className={styles.inputDisabled}
+                disabled
+              />
+              <div className={styles.cooldownInfo}>
+                <span className={styles.cooldownIcon}>🔒</span>
+                <span>
+                  Zmiana zablokowana — następna możliwa za <strong>{nicknameCooldown.daysLeft} dni</strong> ({nicknameCooldown.endDate}).
+                  <br />
+                  Potrzebujesz wcześniej? <a href="mailto:admin@qcstats.gg" className={styles.adminLink}>Kontakt z adminem →</a>
+                </span>
+              </div>
+            </>
+          ) : (
+            <>
+              <input
+                type="text"
+                value={gameNickname}
+                onChange={(e) => setGameNickname(e.target.value)}
+                className={styles.input}
+                placeholder="Twoja ksywka z Quake Champions"
+                maxLength={30}
+              />
+              <span className={styles.hint}>
+                Wpisz dokładnie taką ksywkę, jaką masz ustawioną w grze. Zmiana możliwa raz na {NICKNAME_COOLDOWN_DAYS} dni.
+              </span>
+            </>
+          )}
+        </div>
+
+        {/* Nickname change history */}
+        {profile?.game_nickname_history && profile.game_nickname_history.length > 0 && (
+          <div className={styles.nicknameHistory}>
+            <span className={styles.historyLabel}>Historia zmian:</span>
+            {profile.game_nickname_history.slice(-3).map((entry, i) => (
+              <span key={i} className={styles.historyEntry}>
+                {entry.old} → {entry.new} <small>({new Date(entry.date).toLocaleDateString("pl-PL")})</small>
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ═══ ACCOUNT SECTION ═══ */}
+      <div className={styles.section}>
+        <h2>Konto</h2>
+        <div className={styles.field}>
+          <label>Email</label>
+          <input type="email" value={email} disabled className={styles.inputDisabled} />
+          <span className={styles.hint}>Adres email nie może być zmieniony.</span>
+        </div>
+
+        <div className={styles.field}>
+          <label>Username (URL profilu)</label>
           <input
             type="text"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             className={styles.input}
-            placeholder="Your unique username"
+            placeholder="Twoja unikatowa nazwa użytkownika"
             maxLength={30}
           />
-          <span className={styles.hint}>Used in your public profile URL. Must be unique.</span>
+          <span className={styles.hint}>Używana w adresie profilu: qcstats.vercel.app/player/{username || "..."}</span>
         </div>
 
         <div className={styles.field}>
-          <label>Display Name</label>
+          <label>Nazwa wyświetlana</label>
           <input
             type="text"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
             className={styles.input}
-            placeholder="How you want to be displayed"
+            placeholder="Jak chcesz być wyświetlany"
             maxLength={50}
           />
         </div>
@@ -107,8 +220,8 @@ export default function SettingsContent({ profile, email }: Props) {
         <div className={styles.field}>
           <label className={styles.toggleLabel}>
             <div className={styles.toggleInfo}>
-              <span>Public Profile</span>
-              <span className={styles.hint}>Allow others to view your stats and match history.</span>
+              <span>Publiczny profil</span>
+              <span className={styles.hint}>Pozwól innym widzieć Twoje statystyki i historię meczów.</span>
             </div>
             <button
               type="button"
@@ -121,9 +234,9 @@ export default function SettingsContent({ profile, email }: Props) {
         </div>
 
         <div className={styles.field}>
-          <label>Role</label>
+          <label>Rola</label>
           <div className={styles.roleBadge}>
-            {profile?.role === "admin" ? "🛡️ Admin" : profile?.role === "mod" ? "⚔️ Moderator" : "🎮 Player"}
+            {profile?.role === "admin" ? "🛡️ Admin" : profile?.role === "mod" ? "⚔️ Moderator" : "🎮 Gracz"}
           </div>
         </div>
       </div>
@@ -136,14 +249,14 @@ export default function SettingsContent({ profile, email }: Props) {
 
       <div className={styles.actions}>
         <button className={styles.saveBtn} onClick={handleSave} disabled={saving}>
-          {saving ? "Saving..." : "💾 Save Changes"}
+          {saving ? "Zapisywanie..." : "💾 Zapisz zmiany"}
         </button>
       </div>
 
       <div className={styles.dangerZone}>
-        <h2>Danger Zone</h2>
+        <h2>Strefa zagrożenia</h2>
         <button className={styles.logoutBtn} onClick={handleLogout} disabled={loggingOut}>
-          {loggingOut ? "Logging out..." : "🚪 Log Out"}
+          {loggingOut ? "Wylogowywanie..." : "🚪 Wyloguj się"}
         </button>
       </div>
     </div>

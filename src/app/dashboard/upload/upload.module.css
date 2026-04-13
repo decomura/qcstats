@@ -731,3 +731,170 @@
 .inviteBtn:hover {
   background: rgba(255, 107, 0, 0.25);
 }
+
+/* ─── Nickname Guard (block upload without game nick) ─── */
+
+.nicknameGuard {
+  text-align: center;
+  padding: 3rem 2rem;
+  background: var(--bg-card);
+  border: 2px dashed rgba(255, 165, 0, 0.4);
+  border-radius: 16px;
+  backdrop-filter: blur(12px);
+}
+
+.nicknameGuard h3 {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  color: var(--accent-orange);
+  margin: 1rem 0 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.nicknameGuard p {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  max-width: 500px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+.nicknameGuard strong {
+  color: var(--accent-orange);
+}
+
+/* ─── Nickname Badge ─── */
+
+.nicknameBadge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.2rem;
+  background: rgba(0, 204, 102, 0.06);
+  border: 1px solid rgba(0, 204, 102, 0.2);
+  border-radius: 10px;
+  margin-bottom: 1.5rem;
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.nicknameBadge strong {
+  color: var(--accent-green);
+  font-size: 1rem;
+}
+
+.nicknameBadgeHint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-left: 4px;
+}
+
+/* ─── Fuzzy Match Warning ─── */
+
+.fuzzyMatchWarning {
+  margin-top: 0.75rem;
+  padding: 0.5rem 1rem;
+  background: rgba(255, 170, 0, 0.08);
+  border: 1px solid rgba(255, 170, 0, 0.25);
+  border-radius: 8px;
+  font-size: 0.8rem;
+  color: var(--accent-gold, #ffaa00);
+}
+
+/* ─── Invite Modal ─── */
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: modalFadeIn 0.2s ease-out;
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modalContent {
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: 16px;
+  padding: 2rem;
+  max-width: 450px;
+  width: 90%;
+  animation: modalSlideUp 0.3s ease-out;
+}
+
+@keyframes modalSlideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.modalTitle {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  color: var(--text-primary);
+  margin-bottom: 0.75rem;
+}
+
+.modalDesc {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  margin-bottom: 1.25rem;
+}
+
+.modalInputGroup {
+  margin-bottom: 1.25rem;
+}
+
+.modalInputGroup label {
+  display: block;
+  font-family: var(--font-heading);
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.4rem;
+}
+
+.modalInput {
+  width: 100%;
+  padding: 0.7rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-primary);
+  background: rgba(0, 0, 0, 0.3);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.modalInput:focus {
+  border-color: var(--accent-orange);
+}
+
+.modalActions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+.inviteSentMsg {
+  padding: 1rem;
+  background: rgba(0, 204, 102, 0.1);
+  border: 1px solid rgba(0, 204, 102, 0.3);
+  border-radius: 8px;
+  color: var(--accent-green);
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  text-align: center;
+}

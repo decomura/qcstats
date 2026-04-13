@@ -7,16 +7,65 @@
  * - Create match_players records
  * - Create weapon_stats records
  * - Duplicate detection
+ * - Game nickname validation (anti-troll)
  */
 
 import { createClient } from "@/lib/supabase/client";
 import type { OCRResult, PlayerStats, WeaponStat } from "@/lib/ocr/engine";
+
+/**
+ * Levenshtein distance for fuzzy nickname matching.
+ * Allows for minor OCR errors (1-2 character differences).
+ */
+function levenshtein(a: string, b: string): number {
+  const an = a.length;
+  const bn = b.length;
+  const matrix: number[][] = [];
+
+  for (let i = 0; i <= an; i++) matrix[i] = [i];
+  for (let j = 0; j <= bn; j++) matrix[0][j] = j;
+
+  for (let i = 1; i <= an; i++) {
+    for (let j = 1; j <= bn; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      matrix[i][j] = Math.min(
+        matrix[i - 1][j] + 1,
+        matrix[i][j - 1] + 1,
+        matrix[i - 1][j - 1] + cost
+      );
+    }
+  }
+  return matrix[an][bn];
+}
+
+/**
+ * Check if two nicknames match (case-insensitive, fuzzy with Levenshtein ≤ 2)
+ */
+export function nicknamesMatch(nick1: string, nick2: string): { match: boolean; exact: boolean; distance: number } {
+  const a = nick1.trim().toLowerCase();
+  const b = nick2.trim().toLowerCase();
+  const distance = levenshtein(a, b);
+  return {
+    match: distance <= 2,
+    exact: distance === 0,
+    distance,
+  };
+}
 
 export interface NickAnalysisResult {
   nick: string;
   found: boolean;
   profileId?: string;
   username?: string;
+  gameNickname?: string;
+}
+
+export interface NicknameValidationResult {
+  valid: boolean;
+  matchedNick?: string; // which nick on the screenshot matched
+  exact: boolean;
+  distance: number;
+  error?: string;
 }
 
 export interface SaveMatchResult {
@@ -109,18 +158,88 @@ async function checkDuplicate(
 }
 
 /**
- * Link a player nick to a profile_id if the username exists
+ * Link a player nick to a profile_id — search by game_nickname first, then username
  */
-async function findProfileByNick(nick: string): Promise<{ id: string; username: string } | null> {
+async function findProfileByNick(nick: string): Promise<{ id: string; username: string; gameNickname: string | null } | null> {
   const supabase = createClient();
 
-  const { data } = await supabase
+  // First try game_nickname (primary match for anti-troll)
+  const { data: byGameNick } = await supabase
     .from("profiles")
-    .select("id, username")
+    .select("id, username, game_nickname")
+    .ilike("game_nickname", nick)
+    .single();
+
+  if (byGameNick) return { id: byGameNick.id, username: byGameNick.username, gameNickname: byGameNick.game_nickname };
+
+  // Fallback: try username (backwards compatibility)
+  const { data: byUsername } = await supabase
+    .from("profiles")
+    .select("id, username, game_nickname")
     .ilike("username", nick)
     .single();
 
-  return data ? { id: data.id, username: data.username } : null;
+  return byUsername ? { id: byUsername.id, username: byUsername.username, gameNickname: byUsername.game_nickname } : null;
+}
+
+/**
+ * Validate that the uploader's game_nickname appears on the screenshot.
+ * Returns validation result with fuzzy matching.
+ */
+export async function validateGameNickname(
+  userId: string,
+  ocrNick1: string,
+  ocrNick2: string
+): Promise<NicknameValidationResult> {
+  const supabase = createClient();
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("game_nickname")
+    .eq("id", userId)
+    .single();
+
+  if (!profile?.game_nickname) {
+    return {
+      valid: false,
+      exact: false,
+      distance: 999,
+      error: "NICKNAME_NOT_SET",
+    };
+  }
+
+  const gameNick = profile.game_nickname;
+
+  // Check both players on screenshot
+  const match1 = nicknamesMatch(gameNick, ocrNick1);
+  const match2 = nicknamesMatch(gameNick, ocrNick2);
+
+  if (match1.match) {
+    return { valid: true, matchedNick: ocrNick1, exact: match1.exact, distance: match1.distance };
+  }
+  if (match2.match) {
+    return { valid: true, matchedNick: ocrNick2, exact: match2.exact, distance: match2.distance };
+  }
+
+  return {
+    valid: false,
+    exact: false,
+    distance: Math.min(match1.distance, match2.distance),
+    error: "NICKNAME_NOT_FOUND",
+  };
+}
+
+/**
+ * Get the current user's game nickname
+ */
+export async function getUserGameNickname(userId: string): Promise<string | null> {
+  const supabase = createClient();
+  const { data } = await supabase
+    .from("profiles")
+    .select("game_nickname")
+    .eq("id", userId)
+    .single();
+  return data?.game_nickname || null;
 }
 
 /**
