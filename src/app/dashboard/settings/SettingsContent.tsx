@@ -130,6 +130,7 @@ export default function SettingsContent({ profile, email }: Props) {
 
     try {
       const supabase = createClient();
+      const email = inviteEmail.trim();
 
       // Check remaining invites
       if (invitesLeft <= 0 && profile?.role !== "admin") {
@@ -142,7 +143,7 @@ export default function SettingsContent({ profile, email }: Props) {
       const { error } = await supabase.from("invite_tokens").insert({
         inviter_id: profile?.id,
         token,
-        email: inviteEmail.trim(),
+        email,
       });
 
       if (error) {
@@ -150,18 +151,22 @@ export default function SettingsContent({ profile, email }: Props) {
         return;
       }
 
-      // Open mailto
+      // Send email via API
       const inviterName = profile?.display_name || profile?.username || "Gracz QCStats";
-      const inviteUrl = `${window.location.origin}/login?invite=${token}`;
-      const subject = encodeURIComponent(`${inviterName} zaprasza Cię do QCStats!`);
-      const body = encodeURIComponent(
-        `Cześć!\n\n${inviterName} zaprasza Cię do QCStats — platformy śledzenia statystyk Quake Champions.\n\nKliknij poniższy link aby dołączyć:\n${inviteUrl}\n\nLink ważny przez 7 dni.\n\nDo zobaczenia na arenie! 🎮`
-      );
-      window.open(`mailto:${inviteEmail.trim()}?subject=${subject}&body=${body}`, "_self");
+      const res = await fetch("/api/invite/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, token, inviterName }),
+      });
 
-      setInvitesLeft((prev) => Math.max(0, prev - 1));
-      setInviteMsg({ type: "success", text: `Zaproszenie wygenerowane dla ${inviteEmail.trim()}! Otwórz klienta poczty aby wysłać.` });
-      setInviteEmail("");
+      if (res.ok) {
+        setInvitesLeft((prev) => Math.max(0, prev - 1));
+        setInviteMsg({ type: "success", text: `✅ Zaproszenie wysłane do ${email}!` });
+        setInviteEmail("");
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setInviteMsg({ type: "error", text: data.error || "Błąd wysyłania emaila." });
+      }
     } catch {
       setInviteMsg({ type: "error", text: "Wystąpił błąd." });
     } finally {

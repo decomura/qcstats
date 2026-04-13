@@ -91,8 +91,10 @@ export default function FriendsContent({ userId, inviteCountRemaining, displayNa
     }
 
     try {
-      // Generate tokens for each email
-      const tokens: { email: string; token: string }[] = [];
+      // Generate tokens and send emails
+      const sent: string[] = [];
+      const failed: string[] = [];
+
       for (const email of emails) {
         const token = crypto.randomUUID().replace(/-/g, "").slice(0, 16).toUpperCase();
         const { error } = await supabase.from("invite_tokens").insert({
@@ -101,27 +103,33 @@ export default function FriendsContent({ userId, inviteCountRemaining, displayNa
           email,
         });
         if (error) {
-          setMessage({ type: "error", text: `Błąd dla ${email}: ${error.message}` });
-          setSendingInvite(false);
-          return;
+          failed.push(email);
+          continue;
         }
-        tokens.push({ email, token });
+
+        // Send email via API
+        const res = await fetch("/api/invite/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, token, inviterName: displayName }),
+        });
+
+        if (res.ok) {
+          sent.push(email);
+        } else {
+          failed.push(email);
+        }
       }
 
-      // Open mailto for first email
-      const first = tokens[0];
-      const inviteUrl = `${window.location.origin}/login?invite=${first.token}`;
-      const subject = encodeURIComponent(`${displayName} zaprasza Cię do QCStats! 🎮`);
-      const body = encodeURIComponent(
-        `Cześć!\n\n${displayName} zaprasza Cię do QCStats — platformy śledzenia statystyk Quake Champions.\n\nKliknij poniższy link aby dołączyć:\n${inviteUrl}\n\nLink ważny przez 7 dni.\n\nDo zobaczenia na arenie! 🎮`
-      );
-      window.open(`mailto:${first.email}?subject=${subject}&body=${body}`, "_self");
+      setInvitesLeft((prev) => Math.max(0, prev - sent.length));
 
-      setInvitesLeft((prev) => Math.max(0, prev - emails.length));
-      setMessage({
-        type: "success",
-        text: `Wygenerowano ${tokens.length} zaproszenie(a). Otwórz klienta poczty aby wysłać. 📧`,
-      });
+      if (sent.length > 0 && failed.length === 0) {
+        setMessage({ type: "success", text: `✅ Zaproszenie wysłane do: ${sent.join(", ")}` });
+      } else if (sent.length > 0 && failed.length > 0) {
+        setMessage({ type: "success", text: `✅ Wysłano: ${sent.join(", ")}. ❌ Błąd: ${failed.join(", ")}` });
+      } else {
+        setMessage({ type: "error", text: `Błąd wysyłania do: ${failed.join(", ")}` });
+      }
       setInviteEmails("");
     } catch {
       setMessage({ type: "error", text: "Wystąpił błąd." });
