@@ -133,7 +133,7 @@ export default function SettingsContent({ profile, email }: Props) {
       const email = inviteEmail.trim();
 
       // Check remaining invites
-      if (invitesLeft <= 0 && profile?.role !== "admin") {
+      if (invitesLeft <= 0) {
         setInviteMsg({ type: "error", text: "Nie masz już dostępnych zaproszeń." });
         return;
       }
@@ -320,7 +320,7 @@ export default function SettingsContent({ profile, email }: Props) {
         <div className={styles.inviteCountBox}>
           <span className={styles.inviteCountLabel}>Dostępne zaproszenia:</span>
           <span className={styles.inviteCountValue}>
-            {profile?.role === "admin" ? "∞" : invitesLeft}
+            {invitesLeft}
           </span>
         </div>
 
@@ -331,12 +331,12 @@ export default function SettingsContent({ profile, email }: Props) {
             onChange={(e) => setInviteEmail(e.target.value)}
             placeholder="email@przeciwnika.pl"
             className={styles.input}
-            disabled={inviteSending || (invitesLeft <= 0 && profile?.role !== "admin")}
+            disabled={inviteSending || invitesLeft <= 0}
           />
           <button
             className={styles.inviteSendBtn}
             onClick={handleSendInvite}
-            disabled={inviteSending || !inviteEmail.trim() || (invitesLeft <= 0 && profile?.role !== "admin")}
+            disabled={inviteSending || !inviteEmail.trim() || invitesLeft <= 0}
           >
             {inviteSending ? "✈️ Wysyłanie..." : "✈️ Wyślij zaproszenie"}
           </button>

@@ -84,7 +84,7 @@ export default function FriendsContent({ userId, inviteCountRemaining, displayNa
       return;
     }
 
-    if (!isAdmin && invitesLeft < emails.length) {
+    if (invitesLeft < emails.length) {
       setMessage({ type: "error", text: `Masz tylko ${invitesLeft} zaproszeń. Próbujesz wysłać ${emails.length}.` });
       setSendingInvite(false);
       return;
@@ -232,7 +232,7 @@ export default function FriendsContent({ userId, inviteCountRemaining, displayNa
 
         <div className={styles.inviteCountBox}>
           <span>Dostępne zaproszenia:</span>
-          <span className={styles.inviteCountValue}>{isAdmin ? "∞" : invitesLeft}</span>
+          <span className={styles.inviteCountValue}>{invitesLeft}</span>
         </div>
 
         {/* Email Invite */}
@@ -243,12 +243,12 @@ export default function FriendsContent({ userId, inviteCountRemaining, displayNa
             onChange={(e) => setInviteEmails(e.target.value)}
             placeholder="email@przeciwnika.pl"
             className={styles.emailInput}
-            disabled={sendingInvite || (!isAdmin && invitesLeft <= 0)}
+            disabled={sendingInvite || invitesLeft <= 0}
           />
           <button
             onClick={sendEmailInvites}
             className={styles.sendEmailBtn}
-            disabled={sendingInvite || !inviteEmails.trim() || (!isAdmin && invitesLeft <= 0)}
+            disabled={sendingInvite || !inviteEmails.trim() || invitesLeft <= 0}
           >
             {sendingInvite ? "✈️ Wysyłanie..." : "✈️ Wyślij"}
           </button>
