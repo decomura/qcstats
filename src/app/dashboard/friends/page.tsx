@@ -25,17 +25,17 @@ export default async function FriendsPage() {
 
   // Get friends (accepted)
   const { data: friendships } = await supabase
-    .from("friends")
+    .from("friendships")
     .select(`
       id,
       status,
-      requester_id,
-      addressee_id,
+      user_id,
+      friend_id,
       created_at,
-      requester:profiles!friends_requester_id_fkey(id, username, display_name, avatar_url),
-      addressee:profiles!friends_addressee_id_fkey(id, username, display_name, avatar_url)
+      user:profiles!friendships_user_id_fkey(id, username, display_name, avatar_url),
+      friend:profiles!friendships_friend_id_fkey(id, username, display_name, avatar_url)
     `)
-    .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`)
+    .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`)
     .order("created_at", { ascending: false });
 
   // Get notifications

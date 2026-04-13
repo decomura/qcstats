@@ -87,7 +87,7 @@ export async function POST(request: Request) {
 
     // Don't friend yourself
     if (inviterProfileId === user.id) {
-      return NextResponse.json({ error: "Cannot invite yourself" }, { status: 400 });
+      return NextResponse.json({ message: "Self invite ignored", already: true });
     }
 
     // Set invited_by on the new user's profile
@@ -97,12 +97,12 @@ export async function POST(request: Request) {
       .eq("id", user.id)
       .is("invited_by", null); // only set if not already set
 
-    // Check if already friends
+    // Check if already friends (table: friendships, columns: user_id, friend_id)
     const { data: existing } = await supabaseAdmin
-      .from("friends")
+      .from("friendships")
       .select("id")
       .or(
-        `and(requester_id.eq.${inviterProfileId},addressee_id.eq.${user.id}),and(requester_id.eq.${user.id},addressee_id.eq.${inviterProfileId})`
+        `and(user_id.eq.${inviterProfileId},friend_id.eq.${user.id}),and(user_id.eq.${user.id},friend_id.eq.${inviterProfileId})`
       )
       .limit(1);
 
@@ -111,9 +111,9 @@ export async function POST(request: Request) {
     }
 
     // Create auto-accepted friendship
-    const { error: friendError } = await supabaseAdmin.from("friends").insert({
-      requester_id: inviterProfileId,
-      addressee_id: user.id,
+    const { error: friendError } = await supabaseAdmin.from("friendships").insert({
+      user_id: inviterProfileId,
+      friend_id: user.id,
       status: "accepted",
     });
 
@@ -122,22 +122,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Failed to create friendship" }, { status: 500 });
     }
 
-    // Notification for the inviter
+    // Notification for the inviter (columns: user_id, type, message, metadata)
     await supabaseAdmin.from("notifications").insert({
       user_id: inviterProfileId,
       type: "friend_joined",
-      title: "🎮 Nowy gracz dołączył!",
-      body: `Ktoś dołączył do QCStats dzięki Twojemu zaproszeniu i jest teraz Twoim znajomym!`,
-      data: { joined_user_id: user.id },
+      message: `🎮 Nowy gracz dołączył dzięki Twojemu zaproszeniu!`,
+      metadata: { joined_user_id: user.id },
     });
 
     // Notification for the new user
     await supabaseAdmin.from("notifications").insert({
       user_id: user.id,
       type: "friend_accepted",
-      title: "🤝 Witaj na arenie!",
-      body: `Jesteś teraz znajomym ${inviterName}!`,
-      data: { inviter_id: inviterProfileId },
+      message: `🤝 Witaj na arenie! Jesteś teraz znajomym ${inviterName}!`,
+      metadata: { inviter_id: inviterProfileId },
     });
 
     // Decrement invite_count_remaining for inviter

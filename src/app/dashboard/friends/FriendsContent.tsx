@@ -15,20 +15,19 @@ interface Profile {
 interface Friendship {
   id: string;
   status: string;
-  requester_id: string;
-  addressee_id: string;
+  user_id: string;
+  friend_id: string;
   created_at: string;
-  requester: Profile | Profile[];
-  addressee: Profile | Profile[];
+  user: Profile | Profile[];
+  friend: Profile | Profile[];
 }
 
 interface Notification {
   id: string;
   type: string;
-  title: string;
-  body: string | null;
+  message: string;
+  metadata: Record<string, unknown>;
   is_read: boolean;
-  data: Record<string, unknown>;
   created_at: string;
 }
 
@@ -62,10 +61,10 @@ export default function FriendsContent({ userId, inviteCountRemaining, displayNa
 
   const accepted = localFriendships.filter((f) => f.status === "accepted");
   const pendingReceived = localFriendships.filter(
-    (f) => f.status === "pending" && f.addressee_id === userId
+    (f) => f.status === "pending" && f.friend_id === userId
   );
   const pendingSent = localFriendships.filter(
-    (f) => f.status === "pending" && f.requester_id === userId
+    (f) => f.status === "pending" && f.user_id === userId
   );
 
   const sendEmailInvites = async () => {
@@ -156,9 +155,9 @@ export default function FriendsContent({ userId, inviteCountRemaining, displayNa
 
   const sendRequest = async (targetId: string) => {
     setMessage(null);
-    const { error } = await supabase.from("friends").insert({
-      requester_id: userId,
-      addressee_id: targetId,
+    const { error } = await supabase.from("friendships").insert({
+      user_id: userId,
+      friend_id: targetId,
     });
 
     if (error) {
@@ -214,7 +213,7 @@ export default function FriendsContent({ userId, inviteCountRemaining, displayNa
   };
 
   const getFriendProfile = (f: Friendship): Profile => {
-    return f.requester_id === userId ? getProfile(f.addressee) : getProfile(f.requester);
+    return f.user_id === userId ? getProfile(f.friend) : getProfile(f.user);
   };
 
   return (
@@ -347,13 +346,13 @@ export default function FriendsContent({ userId, inviteCountRemaining, displayNa
         <div className={styles.section}>
           {pendingReceived.length > 0 && <h3>Received</h3>}
           {pendingReceived.map((f) => {
-            const requester = getProfile(f.requester);
+            const sender = getProfile(f.user);
             return (
               <div key={f.id} className={styles.friendRow}>
-                <div className={styles.friendAvatar}>{requester.display_name.charAt(0).toUpperCase()}</div>
+                <div className={styles.friendAvatar}>{sender.display_name.charAt(0).toUpperCase()}</div>
                 <div className={styles.friendInfo}>
-                  <span className={styles.friendName}>{requester.display_name}</span>
-                  <span className={styles.friendUsername}>@{requester.username}</span>
+                  <span className={styles.friendName}>{sender.display_name}</span>
+                  <span className={styles.friendUsername}>@{sender.username}</span>
                 </div>
                 <div className={styles.rowActions}>
                   <button onClick={() => handleAccept(f.id)} className={styles.acceptBtn}>
@@ -369,13 +368,13 @@ export default function FriendsContent({ userId, inviteCountRemaining, displayNa
 
           {pendingSent.length > 0 && <h3>Sent</h3>}
           {pendingSent.map((f) => {
-            const addressee = getProfile(f.addressee);
+            const target = getProfile(f.friend);
             return (
               <div key={f.id} className={styles.friendRow}>
-                <div className={styles.friendAvatar}>{addressee.display_name.charAt(0).toUpperCase()}</div>
+                <div className={styles.friendAvatar}>{target.display_name.charAt(0).toUpperCase()}</div>
                 <div className={styles.friendInfo}>
-                  <span className={styles.friendName}>{addressee.display_name}</span>
-                  <span className={styles.friendUsername}>@{addressee.username}</span>
+                  <span className={styles.friendName}>{target.display_name}</span>
+                  <span className={styles.friendUsername}>@{target.username}</span>
                 </div>
                 <span className={styles.pendingBadge}>Pending...</span>
               </div>
@@ -405,8 +404,7 @@ export default function FriendsContent({ userId, inviteCountRemaining, displayNa
                   {n.type === "friend_request" ? "👤" : n.type === "friend_accepted" || n.type === "friend_joined" ? "🤝" : "📢"}
                 </span>
                 <div className={styles.notifContent}>
-                  <span className={styles.notifTitle}>{n.title}</span>
-                  {n.body && <span className={styles.notifBody}>{n.body}</span>}
+                <span className={styles.notifTitle}>{n.message}</span>
                   <span className={styles.notifTime}>
                     {new Date(n.created_at).toLocaleString("pl-PL")}
                   </span>
