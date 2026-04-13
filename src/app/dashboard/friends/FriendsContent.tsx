@@ -174,16 +174,15 @@ export default function FriendsContent({ userId, inviteCountRemaining, displayNa
       await supabase.from("notifications").insert({
         user_id: targetId,
         type: "friend_request",
-        title: "New Friend Request",
-        body: `Someone wants to be your friend!`,
+        message: "Someone wants to be your friend! 🎯",
       });
     }
   };
 
   const handleAccept = async (friendshipId: string) => {
     const { error } = await supabase
-      .from("friends")
-      .update({ status: "accepted", updated_at: new Date().toISOString() })
+      .from("friendships")
+      .update({ status: "accepted" })
       .eq("id", friendshipId);
 
     if (!error) {
@@ -194,12 +193,12 @@ export default function FriendsContent({ userId, inviteCountRemaining, displayNa
   };
 
   const handleDecline = async (friendshipId: string) => {
-    await supabase.from("friends").delete().eq("id", friendshipId);
+    await supabase.from("friendships").delete().eq("id", friendshipId);
     setLocalFriendships((prev) => prev.filter((f) => f.id !== friendshipId));
   };
 
   const handleRemove = async (friendshipId: string) => {
-    await supabase.from("friends").delete().eq("id", friendshipId);
+    await supabase.from("friendships").delete().eq("id", friendshipId);
     setLocalFriendships((prev) => prev.filter((f) => f.id !== friendshipId));
   };
 

@@ -17,7 +17,7 @@ export default function DashboardNav({ user }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [bellOpen, setBellOpen] = useState(false);
-  const [notifications, setNotifications] = useState<{ id: string; title: string; body: string | null; type: string; is_read: boolean; created_at: string }[]>([]);
+  const [notifications, setNotifications] = useState<{ id: string; message: string; type: string; is_read: boolean; created_at: string }[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const { locale, setLocale, t } = useI18n();
 
@@ -26,7 +26,7 @@ export default function DashboardNav({ user }: Props) {
     const fetchNotifs = async () => {
       const { data } = await supabase
         .from("notifications")
-        .select("id, title, body, type, is_read, created_at")
+        .select("id, message, type, is_read, created_at")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .limit(10);
@@ -124,8 +124,7 @@ export default function DashboardNav({ user }: Props) {
               ) : (
                 notifications.slice(0, 5).map(n => (
                   <div key={n.id} className={styles.dropdownItem} style={{ opacity: n.is_read ? 0.6 : 1, flexDirection: "column", alignItems: "flex-start", gap: "2px" }}>
-                    <span style={{ fontWeight: n.is_read ? 400 : 600, fontSize: "0.8rem" }}>{n.title}</span>
-                    {n.body && <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>{n.body}</span>}
+                    <span style={{ fontWeight: n.is_read ? 400 : 600, fontSize: "0.8rem" }}>{n.message}</span>
                   </div>
                 ))
               )}

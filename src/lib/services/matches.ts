@@ -367,17 +367,17 @@ export async function saveMatch(
   if (opponentProfileId && opponentProfileId !== uploaderProfileId) {
     // Auto-friend: check if friendship already exists
     const { data: existingFriend } = await supabase
-      .from("friends")
+      .from("friendships")
       .select("id")
       .or(
-        `and(requester_id.eq.${uploaderProfileId},addressee_id.eq.${opponentProfileId}),and(requester_id.eq.${opponentProfileId},addressee_id.eq.${uploaderProfileId})`
+        `and(user_id.eq.${uploaderProfileId},friend_id.eq.${opponentProfileId}),and(user_id.eq.${opponentProfileId},friend_id.eq.${uploaderProfileId})`
       )
       .maybeSingle();
 
     if (!existingFriend) {
-      const { error: friendError } = await supabase.from("friends").insert({
-        requester_id: uploaderProfileId,
-        addressee_id: opponentProfileId,
+      const { error: friendError } = await supabase.from("friendships").insert({
+        user_id: uploaderProfileId,
+        friend_id: opponentProfileId,
         status: "accepted",
       });
       autoFriendCreated = !friendError;
@@ -387,9 +387,8 @@ export async function saveMatch(
     const { error: notifError } = await supabase.from("notifications").insert({
       user_id: opponentProfileId,
       type: "new_match",
-      title: "🎮 Nowy mecz!",
-      body: `${uploaderNick} wrzucił mecz: ${p1Nick} ${p1Score}:${p2Score} ${p2Nick}`,
-      data: { match_id: matchId },
+      message: `🎮 ${uploaderNick} wrzucił mecz: ${p1Nick} ${p1Score}:${p2Score} ${p2Nick}`,
+      metadata: { match_id: matchId },
     });
     notificationSent = !notifError;
   }
