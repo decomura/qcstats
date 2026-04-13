@@ -34,7 +34,9 @@ interface Notification {
 
 interface Props {
   userId: string;
-  inviteCode: string;
+  inviteCountRemaining: number;
+  displayName: string;
+  role: string;
   friendships: Friendship[];
   notifications: Notification[];
 }
@@ -43,7 +45,7 @@ function getProfile(data: Profile | Profile[]): Profile {
   return Array.isArray(data) ? data[0] : data;
 }
 
-export default function FriendsContent({ userId, inviteCode, friendships, notifications }: Props) {
+export default function FriendsContent({ userId, inviteCountRemaining, displayName, role, friendships, notifications }: Props) {
   const { t } = useI18n();
   const supabase = createClient();
   const [searchName, setSearchName] = useState("");
@@ -53,11 +55,10 @@ export default function FriendsContent({ userId, inviteCode, friendships, notifi
   const [localFriendships, setLocalFriendships] = useState(friendships);
   const [localNotifications, setLocalNotifications] = useState(notifications);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
-  const [copied, setCopied] = useState(false);
   const [inviteEmails, setInviteEmails] = useState("");
   const [sendingInvite, setSendingInvite] = useState(false);
-
-  const inviteUrl = `${typeof window !== "undefined" ? window.location.origin : "https://qcstats.vercel.app"}/login?invite=${inviteCode}`;
+  const [invitesLeft, setInvitesLeft] = useState(inviteCountRemaining);
+  const isAdmin = role === "admin";
 
   const accepted = localFriendships.filter((f) => f.status === "accepted");
   const pendingReceived = localFriendships.filter(
@@ -67,27 +68,10 @@ export default function FriendsContent({ userId, inviteCode, friendships, notifi
     (f) => f.status === "pending" && f.requester_id === userId
   );
 
-  const copyInviteLink = async () => {
-    try {
-      await navigator.clipboard.writeText(inviteUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Fallback for older browsers
-      const input = document.createElement("input");
-      input.value = inviteUrl;
-      document.body.appendChild(input);
-      input.select();
-      document.execCommand("copy");
-      document.body.removeChild(input);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
-
   const sendEmailInvites = async () => {
     if (!inviteEmails.trim()) return;
     setSendingInvite(true);
+    setMessage(null);
 
     const emails = inviteEmails
       .split(/[,;\s]+/)
@@ -95,30 +79,55 @@ export default function FriendsContent({ userId, inviteCode, friendships, notifi
       .filter((e) => e.includes("@"));
 
     if (emails.length === 0) {
-      setMessage({ type: "error", text: "Enter valid email addresses." });
+      setMessage({ type: "error", text: "Wpisz poprawne adresy email." });
       setSendingInvite(false);
       return;
     }
 
-    // For now, just copy invite link since Supabase free tier has email limits
-    // In the future, this could use Resend or custom SMTP
-    const mailtoLinks = emails.map(
-      (email) =>
-        `mailto:${email}?subject=${encodeURIComponent("Join me on QCStats! 🎮")}&body=${encodeURIComponent(
-          `Hey! I'm using QCStats to track my Quake Champions stats.\n\nJoin me and let's compare our accuracy!\n\n${inviteUrl}\n\nSee you in the arena! ⚡`
-        )}`
-    );
+    if (!isAdmin && invitesLeft < emails.length) {
+      setMessage({ type: "error", text: `Masz tylko ${invitesLeft} zaproszeń. Próbujesz wysłać ${emails.length}.` });
+      setSendingInvite(false);
+      return;
+    }
 
-    // Open first mailto link
-    window.open(mailtoLinks[0]);
+    try {
+      // Generate tokens for each email
+      const tokens: { email: string; token: string }[] = [];
+      for (const email of emails) {
+        const token = crypto.randomUUID().replace(/-/g, "").slice(0, 16).toUpperCase();
+        const { error } = await supabase.from("invite_tokens").insert({
+          inviter_id: userId,
+          token,
+          email,
+        });
+        if (error) {
+          setMessage({ type: "error", text: `Błąd dla ${email}: ${error.message}` });
+          setSendingInvite(false);
+          return;
+        }
+        tokens.push({ email, token });
+      }
 
-    setMessage({
-      type: "success",
-      text: `Email client opened for ${emails.length} invite(s). Link also copied! 📧`,
-    });
-    await navigator.clipboard.writeText(inviteUrl);
-    setInviteEmails("");
-    setSendingInvite(false);
+      // Open mailto for first email
+      const first = tokens[0];
+      const inviteUrl = `${window.location.origin}/login?invite=${first.token}`;
+      const subject = encodeURIComponent(`${displayName} zaprasza Cię do QCStats! 🎮`);
+      const body = encodeURIComponent(
+        `Cześć!\n\n${displayName} zaprasza Cię do QCStats — platformy śledzenia statystyk Quake Champions.\n\nKliknij poniższy link aby dołączyć:\n${inviteUrl}\n\nLink ważny przez 7 dni.\n\nDo zobaczenia na arenie! 🎮`
+      );
+      window.open(`mailto:${first.email}?subject=${subject}&body=${body}`, "_self");
+
+      setInvitesLeft((prev) => Math.max(0, prev - emails.length));
+      setMessage({
+        type: "success",
+        text: `Wygenerowano ${tokens.length} zaproszenie(a). Otwórz klienta poczty aby wysłać. 📧`,
+      });
+      setInviteEmails("");
+    } catch {
+      setMessage({ type: "error", text: "Wystąpił błąd." });
+    } finally {
+      setSendingInvite(false);
+    }
   };
 
   const handleSearch = async () => {
@@ -208,28 +217,14 @@ export default function FriendsContent({ userId, inviteCode, friendships, notifi
 
       {/* ═══════════ INVITE SECTION ═══════════ */}
       <div className={styles.inviteSection}>
-        <h2 className={styles.inviteTitle}>🔗 Invite Friends</h2>
+        <h2 className={styles.inviteTitle}>📨 Zaproś na arenę</h2>
         <p className={styles.inviteDesc}>
-          Share your personal invite link. Anyone who registers through it becomes your friend automatically!
+          Wpisz email przeciwnika — otrzyma unikatowy link zaproszeniowy. Po rejestracji automatycznie stajecie się znajomymi!
         </p>
 
-        {/* Invite Link */}
-        <div className={styles.inviteLinkBox}>
-          <input
-            type="text"
-            readOnly
-            value={inviteUrl}
-            className={styles.inviteLinkInput}
-            onClick={(e) => (e.target as HTMLInputElement).select()}
-          />
-          <button onClick={copyInviteLink} className={styles.copyBtn}>
-            {copied ? "✓ Copied!" : "📋 Copy"}
-          </button>
-        </div>
-
-        {/* Invite Code Badge */}
-        <div className={styles.inviteCodeBadge}>
-          Your code: <span className={styles.codeValue}>{inviteCode}</span>
+        <div className={styles.inviteCountBox}>
+          <span>Dostępne zaproszenia:</span>
+          <span className={styles.inviteCountValue}>{isAdmin ? "∞" : invitesLeft}</span>
         </div>
 
         {/* Email Invite */}
@@ -238,15 +233,16 @@ export default function FriendsContent({ userId, inviteCode, friendships, notifi
             type="text"
             value={inviteEmails}
             onChange={(e) => setInviteEmails(e.target.value)}
-            placeholder="Enter emails (comma-separated)..."
+            placeholder="email@przeciwnika.pl"
             className={styles.emailInput}
+            disabled={sendingInvite || (!isAdmin && invitesLeft <= 0)}
           />
           <button
             onClick={sendEmailInvites}
             className={styles.sendEmailBtn}
-            disabled={sendingInvite || !inviteEmails.trim()}
+            disabled={sendingInvite || !inviteEmails.trim() || (!isAdmin && invitesLeft <= 0)}
           >
-            {sendingInvite ? "..." : "📧 Send"}
+            {sendingInvite ? "✈️ Wysyłanie..." : "✈️ Wyślij"}
           </button>
         </div>
       </div>
