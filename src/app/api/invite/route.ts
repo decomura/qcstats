@@ -1,9 +1,14 @@
 /**
- * POST /api/invite/accept
+ * POST /api/invite
  * 
  * Called after a user registers via an invite link.
- * Creates an auto-friendship between the inviter and the new user.
- * Body: { invite_code: string }
+ * Processes invite_token OR legacy invite_code:
+ * - Marks token as used
+ * - Sets invited_by on new user's profile  
+ * - Creates auto-friendship between inviter and new user
+ * - Sends notifications to both
+ * 
+ * Body: { invite_token: string }
  */
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
@@ -16,10 +21,11 @@ const supabaseAdmin = createClient(
 
 export async function POST(request: Request) {
   try {
-    const { invite_code } = await request.json();
+    const body = await request.json();
+    const token = body.invite_token || body.invite_code; // support both param names
 
-    if (!invite_code || typeof invite_code !== "string") {
-      return NextResponse.json({ error: "Missing invite_code" }, { status: 400 });
+    if (!token || typeof token !== "string") {
+      return NextResponse.json({ error: "Missing invite token" }, { status: 400 });
     }
 
     // Get the authenticated user
@@ -32,28 +38,71 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
-    // Find the inviter by invite_code
-    const { data: inviterProfile } = await supabaseAdmin
-      .from("profiles")
-      .select("id, username, display_name")
-      .eq("invite_code", invite_code.toUpperCase())
+    let inviterProfileId: string | null = null;
+    let inviterName: string | null = null;
+
+    // Try new invite_tokens table first
+    const { data: tokenData } = await supabaseAdmin
+      .from("invite_tokens")
+      .select("id, inviter_id")
+      .eq("token", token.toUpperCase())
+      .is("used_by", null)
       .single();
 
-    if (!inviterProfile) {
-      return NextResponse.json({ error: "Invalid invite code" }, { status: 404 });
+    if (tokenData) {
+      // Mark token as used
+      await supabaseAdmin
+        .from("invite_tokens")
+        .update({
+          used_by: user.id,
+          used_at: new Date().toISOString(),
+        })
+        .eq("id", tokenData.id);
+
+      inviterProfileId = tokenData.inviter_id;
+
+      // Get inviter name
+      const { data: inviterProfile } = await supabaseAdmin
+        .from("profiles")
+        .select("username, display_name")
+        .eq("id", inviterProfileId)
+        .single();
+
+      inviterName = inviterProfile?.display_name || inviterProfile?.username || null;
+    } else {
+      // Fallback: legacy invite_code from profiles
+      const { data: inviterProfile } = await supabaseAdmin
+        .from("profiles")
+        .select("id, username, display_name")
+        .eq("invite_code", token.toUpperCase())
+        .single();
+
+      if (!inviterProfile) {
+        return NextResponse.json({ error: "Invalid invite token" }, { status: 404 });
+      }
+
+      inviterProfileId = inviterProfile.id;
+      inviterName = inviterProfile.display_name || inviterProfile.username;
     }
 
     // Don't friend yourself
-    if (inviterProfile.id === user.id) {
+    if (inviterProfileId === user.id) {
       return NextResponse.json({ error: "Cannot invite yourself" }, { status: 400 });
     }
+
+    // Set invited_by on the new user's profile
+    await supabaseAdmin
+      .from("profiles")
+      .update({ invited_by: inviterProfileId })
+      .eq("id", user.id)
+      .is("invited_by", null); // only set if not already set
 
     // Check if already friends
     const { data: existing } = await supabaseAdmin
       .from("friends")
       .select("id")
       .or(
-        `and(requester_id.eq.${inviterProfile.id},addressee_id.eq.${user.id}),and(requester_id.eq.${user.id},addressee_id.eq.${inviterProfile.id})`
+        `and(requester_id.eq.${inviterProfileId},addressee_id.eq.${user.id}),and(requester_id.eq.${user.id},addressee_id.eq.${inviterProfileId})`
       )
       .limit(1);
 
@@ -63,7 +112,7 @@ export async function POST(request: Request) {
 
     // Create auto-accepted friendship
     const { error: friendError } = await supabaseAdmin.from("friends").insert({
-      requester_id: inviterProfile.id,
+      requester_id: inviterProfileId,
       addressee_id: user.id,
       status: "accepted",
     });
@@ -73,27 +122,30 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Failed to create friendship" }, { status: 500 });
     }
 
-    // Create notification for the inviter
+    // Notification for the inviter
     await supabaseAdmin.from("notifications").insert({
-      user_id: inviterProfile.id,
+      user_id: inviterProfileId,
       type: "friend_joined",
-      title: "🎮 New friend joined!",
-      body: `Someone joined QCStats using your invite link and is now your friend!`,
+      title: "🎮 Nowy gracz dołączył!",
+      body: `Ktoś dołączył do QCStats dzięki Twojemu zaproszeniu i jest teraz Twoim znajomym!`,
       data: { joined_user_id: user.id },
     });
 
-    // Create notification for the new user
+    // Notification for the new user
     await supabaseAdmin.from("notifications").insert({
       user_id: user.id,
       type: "friend_accepted",
-      title: "🤝 Welcome, Fragger!",
-      body: `You are now friends with ${inviterProfile.display_name || inviterProfile.username}!`,
-      data: { inviter_id: inviterProfile.id },
+      title: "🤝 Witaj na arenie!",
+      body: `Jesteś teraz znajomym ${inviterName}!`,
+      data: { inviter_id: inviterProfileId },
     });
+
+    // Decrement invite_count_remaining for inviter
+    await supabaseAdmin.rpc("decrement_invite_count", { user_id: inviterProfileId });
 
     return NextResponse.json({
       success: true,
-      inviter: inviterProfile.username,
+      inviter: inviterName,
     });
   } catch (err) {
     console.error("Invite accept error:", err);

@@ -230,3 +230,41 @@
   from { box-shadow: 0 0 10px rgba(204, 68, 0, 0.1); }
   to { box-shadow: 0 0 20px rgba(204, 68, 0, 0.25); }
 }
+
+.inviteBannerError {
+  background: rgba(204, 0, 0, 0.1);
+  border: 1px solid rgba(204, 0, 0, 0.35);
+  border-radius: var(--radius-md);
+  padding: 0.8rem 1rem;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  color: var(--accent-red);
+  margin-bottom: var(--space-md);
+  line-height: 1.5;
+}
+
+.inviteOnlyNotice {
+  padding: 2rem 1.5rem;
+  text-align: center;
+  border: 2px dashed rgba(255, 107, 0, 0.3);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 107, 0, 0.03);
+  margin-bottom: var(--space-md);
+}
+
+.inviteOnlyNotice h3 {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  color: var(--accent-orange);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 0.75rem 0 0.5rem;
+}
+
+.inviteOnlyNotice p {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  line-height: 1.6;
+  margin: 0.25rem 0;
+}

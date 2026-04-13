@@ -1,0 +1,208 @@
+.page {
+  padding: 1.5rem 2rem;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.page h1 {
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.accent {
+  color: var(--accent-orange);
+}
+
+.subtitle {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  margin-bottom: 2rem;
+}
+
+/* ─── Stats Row ─── */
+
+.statsRow {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.statCard {
+  flex: 1;
+  text-align: center;
+  padding: 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: 12px;
+  backdrop-filter: blur(12px);
+}
+
+.statValue {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--accent-orange);
+}
+
+.statLabel {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ─── Legend ─── */
+
+.legend {
+  display: flex;
+  gap: 1.5rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-bottom: 1.5rem;
+  padding: 0.5rem 1rem;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+}
+
+/* ─── Tree ─── */
+
+.treeContainer {
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: 16px;
+  padding: 1.5rem;
+  backdrop-filter: blur(12px);
+}
+
+.treeNode {
+  position: relative;
+  margin-left: 1.5rem;
+}
+
+.treeNode:first-child {
+  margin-left: 0;
+}
+
+.treeBranch {
+  position: absolute;
+  left: -1.5rem;
+  top: 0;
+}
+
+.branchLine {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  white-space: pre;
+  opacity: 0.5;
+}
+
+.nodeCard {
+  display: inline-block;
+  padding: 0.5rem 0.9rem;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  margin: 4px 0;
+  transition: all 0.2s;
+}
+
+.nodeCard:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: var(--border-primary);
+}
+
+.nodeCardSelf {
+  border-color: var(--accent-orange) !important;
+  background: rgba(255, 107, 0, 0.06) !important;
+}
+
+.nodeCardAdmin {
+  border-color: rgba(0, 204, 102, 0.3);
+  background: rgba(0, 204, 102, 0.04);
+}
+
+.nodeHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.nodeIcon {
+  font-size: 0.9rem;
+}
+
+.nodeName {
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.gameNick {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.youBadge {
+  font-size: 0.6rem;
+  background: var(--accent-orange);
+  color: white;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.adminBadge {
+  font-size: 0.6rem;
+  background: rgba(0, 204, 102, 0.2);
+  color: var(--accent-green);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border: 1px solid rgba(0, 204, 102, 0.3);
+}
+
+.seedBadge {
+  font-size: 0.6rem;
+  background: rgba(255, 170, 0, 0.15);
+  color: var(--accent-gold, #ffaa00);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border: 1px solid rgba(255, 170, 0, 0.3);
+}
+
+.nodeInfo {
+  display: flex;
+  gap: 0.8rem;
+  margin-top: 2px;
+}
+
+.joinDate {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.childCount {
+  font-size: 0.7rem;
+  color: var(--accent-green);
+  font-weight: 600;
+}
+
+.childrenContainer {
+  margin-left: 1.5rem;
+  padding-left: 0;
+  border-left: 1px dashed rgba(255, 255, 255, 0.08);
+}
