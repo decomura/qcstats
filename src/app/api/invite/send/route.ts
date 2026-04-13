@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     const resend = new Resend(process.env.RESEND_API_KEY);
 
     const { error } = await resend.emails.send({
-      from: "QCStats <noreply@qcstats.vercel.app>",
+      from: "QCStats <onboarding@resend.dev>",
       to: email,
       subject: `${inviterName} zaprasza Cię do QCStats! 🎮`,
       html: `
