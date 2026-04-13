@@ -25,8 +25,7 @@ function LoginContent() {
     if (invite) {
       setInviteToken(invite);
       localStorage.setItem("qcstats_invite", invite);
-      setMode("register");
-      // Validate the token
+      // Validate first, then decide mode
       validateInviteToken(invite);
     } else {
       const stored = localStorage.getItem("qcstats_invite");
@@ -44,11 +43,16 @@ function LoginContent() {
       const data = await res.json();
       setInviteValid(data.valid);
       setInviterName(data.inviterName || null);
-      if (!data.valid) {
+      if (data.valid) {
+        setMode("register");
+      } else {
+        // Invalid token — stay in login mode, existing users can log in
         localStorage.removeItem("qcstats_invite");
+        setMode("login");
       }
     } catch {
       setInviteValid(false);
+      setMode("login");
     } finally {
       setInviteChecking(false);
     }
@@ -140,11 +144,11 @@ function LoginContent() {
           </div>
         )}
 
-        {/* Invalid/expired invite */}
+        {/* Invalid/expired invite — non-blocking info */}
         {inviteToken && inviteValid === false && !inviteChecking && (
           <div className={styles.inviteBannerError}>
-            ❌ Ten link zaproszeniowy jest nieprawidłowy lub wygasł.
-            Poproś o nowy link.
+            ℹ️ This invite link is invalid or expired. You can still log in
+            if you already have an account.
           </div>
         )}
 
