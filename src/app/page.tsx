@@ -22,7 +22,7 @@ export default function LandingPage() {
         <div className={styles.heroContent}>
           <div className={styles.heroBadge}>
             <span className={styles.dot} />
-            Quake Champions Community Tool
+            Narzędzie społeczności Quake Champions
           </div>
 
           <h1 className={styles.heroTitle}>
@@ -61,7 +61,7 @@ export default function LandingPage() {
             </div>
             <div className={styles.statsStripItem}>
               <div className={styles.statsStripValue}>AI</div>
-              <div className={styles.statsStripLabel}>Gemini Vision OCR</div>
+              <div className={styles.statsStripLabel}>Gemini Vision AI</div>
             </div>
             <div className={styles.statsStripItem}>
               <div className={styles.statsStripValue}>🔒</div>
