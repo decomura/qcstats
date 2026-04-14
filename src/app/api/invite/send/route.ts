@@ -37,7 +37,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const inviteUrl = `${process.env.NEXT_PUBLIC_SITE_URL || "https://qcstats.vercel.app"}/login?invite=${token}`;
+    // Sanitize inviterName to prevent XSS in email HTML
+    const sanitize = (str: string) =>
+      str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    const safeInviterName = sanitize(inviterName || "Player");
+    const safeToken = encodeURIComponent(token);
+
+    const inviteUrl = `${process.env.NEXT_PUBLIC_SITE_URL || "https://qcstats.vercel.app"}/login?invite=${safeToken}`;
 
     const transporter = nodemailer.createTransport({
       service: "gmail",
@@ -68,7 +74,7 @@ export async function POST(request: NextRequest) {
             </h2>
             
             <p style="line-height: 1.6; margin: 0 0 16px; color: #b0b0b0;">
-              <strong style="color: #ff6b00;">${inviterName}</strong> has invited you to join 
+              <strong style="color: #ff6b00;">${safeInviterName}</strong> has invited you to join 
               <strong>QCStats</strong> — a Quake Champions stats tracking platform.
             </p>
 
