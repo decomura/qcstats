@@ -108,7 +108,8 @@ function LoginContent() {
         return;
       }
       await processInvite();
-      router.push("/dashboard");
+      const redirectTo = searchParams.get("redirect") || "/dashboard";
+      router.push(redirectTo);
       router.refresh();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Uwierzytelnianie nie powiodło się");
@@ -119,10 +120,12 @@ function LoginContent() {
 
   const handleGoogleLogin = async () => {
     setError(null);
-    // Include invite token in redirect so auth callback can pass it through
-    const callbackUrl = inviteToken
-      ? `${window.location.origin}/auth/callback?invite=${inviteToken}`
-      : `${window.location.origin}/auth/callback`;
+    // Build callback URL preserving invite token and redirect destination
+    const redirectDest = searchParams.get("redirect") || "/dashboard";
+    const params = new URLSearchParams();
+    params.set("next", redirectDest);
+    if (inviteToken) params.set("invite", inviteToken);
+    const callbackUrl = `${window.location.origin}/auth/callback?${params.toString()}`;
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {

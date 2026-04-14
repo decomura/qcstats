@@ -5,6 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import type { User } from "@supabase/supabase-js";
 import { useI18n } from "@/lib/i18n";
+import PlayerSearch from "./PlayerSearch";
 import styles from "./DashboardNav.module.css";
 
 interface Props {
@@ -18,6 +19,7 @@ export default function DashboardNav({ user }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [bellOpen, setBellOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const [notifications, setNotifications] = useState<{ id: string; message: string; type: string; is_read: boolean; created_at: string }[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const { locale, setLocale, t } = useI18n();
@@ -68,19 +70,37 @@ export default function DashboardNav({ user }: Props) {
           <a href="/dashboard/upload" className={`${styles.link} ${pathname === "/dashboard/upload" ? styles.active : ""}`}>
             📸 {t("nav.upload")}
           </a>
-          <a href="/dashboard/history" className={`${styles.link} ${pathname === "/dashboard/history" ? styles.active : ""}`}>
-            📋 {t("nav.history")}
-          </a>
-          <a href="/dashboard/compare" className={`${styles.link} ${pathname === "/dashboard/compare" ? styles.active : ""}`}>
-            ⚔️ {t("nav.compare")}
-          </a>
-          <a href="/dashboard/friends" className={`${styles.link} ${pathname === "/dashboard/friends" ? styles.active : ""}`}>
-            👥 {t("friends.title")}
-          </a>
           <a href="/wall" className={`${styles.link} ${pathname === "/wall" ? styles.active : ""}`}>
             🏟️ Wall
           </a>
+
+          {/* More dropdown */}
+          <div className={styles.moreMenu}>
+            <button
+              className={`${styles.link} ${['/dashboard/history','/dashboard/compare','/dashboard/friends'].includes(pathname) ? styles.active : ''}`}
+              onClick={() => { setMoreOpen(!moreOpen); setMenuOpen(false); setBellOpen(false); }}
+              type="button"
+            >
+              ⚙️ Więcej ▾
+            </button>
+            {moreOpen && (
+              <div className={styles.dropdown} style={{ left: 0, right: 'auto', minWidth: '180px' }}>
+                <a href="/dashboard/history" className={styles.dropdownItem} onClick={() => setMoreOpen(false)}>
+                  📋 {t("nav.history")}
+                </a>
+                <a href="/dashboard/compare" className={styles.dropdownItem} onClick={() => setMoreOpen(false)}>
+                  ⚔️ {t("nav.compare")}
+                </a>
+                <a href="/dashboard/friends" className={styles.dropdownItem} onClick={() => setMoreOpen(false)}>
+                  👥 {t("friends.title")}
+                </a>
+              </div>
+            )}
+          </div>
         </div>
+
+        {/* Player Search */}
+        <PlayerSearch />
 
         {/* Notification Bell */}
         <div className={styles.userMenu}>

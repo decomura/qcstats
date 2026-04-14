@@ -107,7 +107,7 @@ export default function ReactionBar({
             aria-label={label}
           >
             <span className={styles.reactionIcon}>{icon}</span>
-            {count > 0 && <span className={styles.reactionCount}>{count}</span>}
+            <span className={`${styles.reactionCount} ${count === 0 ? styles.countZero : ""}`}>{count}</span>
           </button>
         );
       })}

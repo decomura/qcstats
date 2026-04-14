@@ -65,6 +65,10 @@
   position: relative;
 }
 
+.moreMenu {
+  position: relative;
+}
+
 .userBtn {
   display: flex;
   align-items: center;

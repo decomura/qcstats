@@ -5,6 +5,7 @@ import { fetchWallPosts, type WallPost } from "@/lib/services/wall";
 import { createClient } from "@/lib/supabase/client";
 import ReactionBar from "@/components/ReactionBar";
 import CommentSection from "@/components/CommentSection";
+import PlayerSearch from "@/components/PlayerSearch";
 import styles from "./wall.module.css";
 
 /** Scroll-to-top floating button */
@@ -310,6 +311,7 @@ export default function PublicWallPage() {
           <span className={styles.qc}>QC</span>STATS
         </a>
         <div className={styles.navActions}>
+          <PlayerSearch />
           {currentUserId && (
             <a href="/dashboard/upload" className={styles.uploadBtn}>📸 Upload</a>
           )}
