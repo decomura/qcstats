@@ -1,7 +1,7 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import type { User } from "@supabase/supabase-js";
 import { useI18n } from "@/lib/i18n";
@@ -13,6 +13,7 @@ interface Props {
 
 export default function DashboardNav({ user }: Props) {
   const router = useRouter();
+  const pathname = usePathname();
   const supabase = createClient();
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -61,25 +62,22 @@ export default function DashboardNav({ user }: Props) {
 
         {/* Nav Links */}
         <div className={styles.links}>
-          <a href="/dashboard" className={styles.link}>
+          <a href="/dashboard" className={`${styles.link} ${pathname === "/dashboard" ? styles.active : ""}`}>
             📊 {t("nav.dashboard")}
           </a>
-          <a href="/dashboard/upload" className={styles.link}>
+          <a href="/dashboard/upload" className={`${styles.link} ${pathname === "/dashboard/upload" ? styles.active : ""}`}>
             📸 {t("nav.upload")}
           </a>
-          <a href="/dashboard/history" className={styles.link}>
+          <a href="/dashboard/history" className={`${styles.link} ${pathname === "/dashboard/history" ? styles.active : ""}`}>
             📋 {t("nav.history")}
           </a>
-          <a href="/dashboard/compare" className={styles.link}>
+          <a href="/dashboard/compare" className={`${styles.link} ${pathname === "/dashboard/compare" ? styles.active : ""}`}>
             ⚔️ {t("nav.compare")}
           </a>
-          <a href="/dashboard/friends" className={styles.link}>
+          <a href="/dashboard/friends" className={`${styles.link} ${pathname === "/dashboard/friends" ? styles.active : ""}`}>
             👥 {t("friends.title")}
           </a>
-          <a href="/dashboard/community" className={styles.link}>
-            🌳 Community
-          </a>
-          <a href="/wall" className={styles.link}>
+          <a href="/wall" className={`${styles.link} ${pathname === "/wall" ? styles.active : ""}`}>
             🏟️ Wall
           </a>
         </div>
@@ -191,7 +189,6 @@ export default function DashboardNav({ user }: Props) {
           <a href="/dashboard/history" className={styles.mobileLink} onClick={() => setMobileOpen(false)}>📋 {t("nav.history")}</a>
           <a href="/dashboard/compare" className={styles.mobileLink} onClick={() => setMobileOpen(false)}>⚔️ {t("nav.compare")}</a>
           <a href="/dashboard/friends" className={styles.mobileLink} onClick={() => setMobileOpen(false)}>👥 {t("friends.title")}</a>
-          <a href="/dashboard/community" className={styles.mobileLink} onClick={() => setMobileOpen(false)}>🌳 Community</a>
           <a href="/wall" className={styles.mobileLink} onClick={() => setMobileOpen(false)}>🏟️ Wall</a>
           <a href="/dashboard/settings" className={styles.mobileLink} onClick={() => setMobileOpen(false)}>⚙️ {t("nav.settings")}</a>
           <button onClick={() => { setLocale(locale === "en" ? "pl" : "en"); setMobileOpen(false); }} className={styles.mobileLink} type="button">🌐 {locale === "en" ? "Polski" : "English"}</button>

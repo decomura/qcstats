@@ -54,6 +54,13 @@
   background: rgba(255, 255, 255, 0.05);
 }
 
+.active {
+  color: var(--accent-orange) !important;
+  background: rgba(255, 107, 0, 0.08);
+  border-bottom: 2px solid var(--accent-orange);
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+}
+
 .userMenu {
   position: relative;
 }

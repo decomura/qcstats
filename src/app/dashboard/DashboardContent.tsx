@@ -163,15 +163,22 @@ export default function DashboardContent({
 
         {!hasData ? (
           <div className={styles.emptyState}>
-            <span className={styles.emptyIcon}>📸</span>
-            <h3>No matches yet</h3>
+            <span className={styles.emptyIcon}>🎮</span>
+            <h3>Witaj na arenie, {userName}!</h3>
             <p>
-              Upload your first QC ranking screenshot to start tracking your
-              stats.
+              Wrzuć swój pierwszy screenshot z Duel, aby rozpocząć śledzenie statystyk.
             </p>
-            <Link href="/dashboard/upload" className={styles.ctaBtn}>
-              ⚡ Upload First Screenshot
-            </Link>
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center', marginTop: '0.5rem' }}>
+              <Link href="/dashboard/upload" className={styles.ctaBtn}>
+                📸 Upload Screenshot
+              </Link>
+              <Link href="/wall" className={styles.ctaBtnSecondary || styles.viewAll}>
+                🏟️ Community Wall
+              </Link>
+            </div>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '1rem' }}>
+              💡 Tip: Zrób screenshot ekranu wyników Duel w Quake Champions i wrzuć go tutaj — AI rozpozna statystyki automatycznie!
+            </p>
           </div>
         ) : (
           <div className={styles.matchList}>

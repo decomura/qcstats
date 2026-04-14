@@ -7,6 +7,27 @@ import ReactionBar from "@/components/ReactionBar";
 import CommentSection from "@/components/CommentSection";
 import styles from "./wall.module.css";
 
+/** Scroll-to-top floating button */
+function BackToTop() {
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setVisible(window.scrollY > 600);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+  if (!visible) return null;
+  return (
+    <button
+      className={styles.backToTop}
+      onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+      aria-label="Powrót na górę"
+      title="Powrót na górę"
+    >
+      ↑
+    </button>
+  );
+}
+
 export default function PublicWallPage() {
   const [posts, setPosts] = useState<WallPost[]>([]);
   const [page, setPage] = useState(1);
@@ -118,9 +139,9 @@ export default function PublicWallPage() {
               {post.uploader_avatar && (
                 <img src={post.uploader_avatar} alt="" className={styles.authorAvatar} />
               )}
-              <span className={styles.authorName}>
+              <a href={`/player/${encodeURIComponent(post.uploader_username || "")}`} className={styles.authorName}>
                 {post.uploader_username || "Anonim"}
-              </span>
+              </a>
             </div>
             <span className={styles.postTime}>{timeAgo(post.created_at)}</span>
           </div>
@@ -133,7 +154,7 @@ export default function PublicWallPage() {
         {/* Score Display with colored DMG/ACC */}
         <div className={styles.scoreDisplay}>
           <div className={`${styles.playerSide} ${p1?.is_winner ? styles.winner : ""}`}>
-            <span className={styles.playerNick}>{p1?.player_nick || "?"}</span>
+            <a href={`/player/${encodeURIComponent(p1?.player_nick || "")}`} className={styles.playerNick}>{p1?.player_nick || "?"}</a>
             <div className={styles.playerMiniStats}>
               <span className={valClass(p1?.total_damage || 0, p2?.total_damage || 0)}>
                 DMG {p1?.total_damage || 0}
@@ -153,7 +174,7 @@ export default function PublicWallPage() {
             </span>
           </div>
           <div className={`${styles.playerSide} ${styles.playerRight} ${p2?.is_winner ? styles.winner : ""}`}>
-            <span className={styles.playerNick}>{p2?.player_nick || "?"}</span>
+            <a href={`/player/${encodeURIComponent(p2?.player_nick || "")}`} className={styles.playerNick}>{p2?.player_nick || "?"}</a>
             <div className={styles.playerMiniStats}>
               <span className={valClass(p2?.total_damage || 0, p1?.total_damage || 0)}>
                 DMG {p2?.total_damage || 0}
@@ -216,7 +237,7 @@ export default function PublicWallPage() {
                     {wr.w1?.accuracy_pct || 0}%
                   </span>
                 </span>
-                <img src={wIcon(wr.name)} alt={wr.name} className={styles.symIcon}
+                <img src={wIcon(wr.name)} alt={wr.name} className={styles.symIcon} title={wr.name}
                   onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                 />
                 <span className={`${styles.symWVal} ${styles.symRight}`}>
@@ -335,9 +356,9 @@ export default function PublicWallPage() {
                     {post.uploader_avatar && (
                       <img src={post.uploader_avatar} alt="" className={styles.authorAvatar} />
                     )}
-                    <span className={styles.authorName}>
+                    <a href={`/player/${encodeURIComponent(post.uploader_username || "")}`} className={styles.authorName}>
                       {post.uploader_username || "Anonim"}
-                    </span>
+                    </a>
                   </div>
                   <div className={styles.groupInfo}>
                     <span className={styles.groupBadge}>
@@ -412,6 +433,8 @@ export default function PublicWallPage() {
           )}
         </button>
       )}
+
+      <BackToTop />
     </div>
   );
 }
