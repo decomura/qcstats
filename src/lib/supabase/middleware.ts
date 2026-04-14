@@ -58,6 +58,13 @@ export async function updateSession(request: NextRequest) {
   if (isAuthPage && user) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
+    // Preserve invite token so InviteProcessor can handle it
+    const invite = request.nextUrl.searchParams.get("invite");
+    url.searchParams.delete("invite");
+    url.searchParams.delete("redirect");
+    if (invite) {
+      url.searchParams.set("invite", invite);
+    }
     return NextResponse.redirect(url);
   }
 
