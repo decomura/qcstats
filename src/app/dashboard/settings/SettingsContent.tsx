@@ -138,17 +138,32 @@ export default function SettingsContent({ profile, email }: Props) {
         return;
       }
 
-      // Generate token
-      const token = crypto.randomUUID().replace(/-/g, "").slice(0, 16).toUpperCase();
-      const { error } = await supabase.from("invite_tokens").insert({
-        inviter_id: profile?.id,
-        token,
-        email,
-      });
+      // Deduplication: check for existing active token
+      const { data: existingToken } = await supabase
+        .from("invite_tokens")
+        .select("token")
+        .eq("inviter_id", profile?.id)
+        .eq("email", email)
+        .is("used_by", null)
+        .gt("expires_at", new Date().toISOString())
+        .limit(1)
+        .single();
 
-      if (error) {
-        setInviteMsg({ type: "error", text: "Błąd tworzenia zaproszenia: " + error.message });
-        return;
+      let token: string;
+      if (existingToken) {
+        token = existingToken.token;
+      } else {
+        token = crypto.randomUUID().replace(/-/g, "").slice(0, 16).toUpperCase();
+        const { error } = await supabase.from("invite_tokens").insert({
+          inviter_id: profile?.id,
+          token,
+          email,
+        });
+
+        if (error) {
+          setInviteMsg({ type: "error", text: "Błąd tworzenia zaproszenia: " + error.message });
+          return;
+        }
       }
 
       // Send email via API

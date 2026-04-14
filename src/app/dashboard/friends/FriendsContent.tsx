@@ -95,15 +95,33 @@ export default function FriendsContent({ userId, inviteCountRemaining, displayNa
       const failed: string[] = [];
 
       for (const email of emails) {
-        const token = crypto.randomUUID().replace(/-/g, "").slice(0, 16).toUpperCase();
-        const { error } = await supabase.from("invite_tokens").insert({
-          inviter_id: userId,
-          token,
-          email,
-        });
-        if (error) {
-          failed.push(email);
-          continue;
+        // Deduplication: check for existing active (unused, non-expired) token
+        const { data: existing } = await supabase
+          .from("invite_tokens")
+          .select("token")
+          .eq("inviter_id", userId)
+          .eq("email", email)
+          .is("used_by", null)
+          .gt("expires_at", new Date().toISOString())
+          .limit(1)
+          .single();
+
+        let token: string;
+        if (existing) {
+          // Reuse existing token
+          token = existing.token;
+        } else {
+          // Generate new token
+          token = crypto.randomUUID().replace(/-/g, "").slice(0, 16).toUpperCase();
+          const { error } = await supabase.from("invite_tokens").insert({
+            inviter_id: userId,
+            token,
+            email,
+          });
+          if (error) {
+            failed.push(email);
+            continue;
+          }
         }
 
         // Send email via API

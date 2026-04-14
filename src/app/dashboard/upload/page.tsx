@@ -363,13 +363,29 @@ export default function UploadPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Create invite token
-      const token = crypto.randomUUID().replace(/-/g, "").slice(0, 16).toUpperCase();
-      await supabase.from("invite_tokens").insert({
-        inviter_id: user.id,
-        token,
-        email: inviteEmail.trim().toLowerCase(),
-      });
+      // Deduplication: reuse existing active token for same email
+      const emailNorm = inviteEmail.trim().toLowerCase();
+      const { data: existingToken } = await supabase
+        .from("invite_tokens")
+        .select("token")
+        .eq("inviter_id", user.id)
+        .eq("email", emailNorm)
+        .is("used_by", null)
+        .gt("expires_at", new Date().toISOString())
+        .limit(1)
+        .single();
+
+      let token: string;
+      if (existingToken) {
+        token = existingToken.token;
+      } else {
+        token = crypto.randomUUID().replace(/-/g, "").slice(0, 16).toUpperCase();
+        await supabase.from("invite_tokens").insert({
+          inviter_id: user.id,
+          token,
+          email: emailNorm,
+        });
+      }
 
       // Open mailto with invite
       const inviteUrl = `${window.location.origin}/login?invite=${token}`;
