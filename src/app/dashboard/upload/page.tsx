@@ -885,8 +885,22 @@ function PlayerCard({
 }: {
   player: OCRResult["player1"];
 }) {
-  const weaponIcon = (name: string) =>
-    `/img/${name.toLowerCase().replace(/ /g, "_").replace("lightning", "lighting")}.png`;
+  const weaponIcon = (name: string) => {
+    const map: Record<string, string> = {
+      "Gauntlet": "/img/gauntlet.png",
+      "Machine Gun": "/img/machine_gun.png",
+      "Super Machine Gun": "/img/super_machine_gun.png",
+      "Shotgun": "/img/shotgun.png",
+      "Super Shotgun": "/img/super_shotgun.png",
+      "Nail Gun": "/img/nailgun.png",
+      "Super Nailgun": "/img/super_nailgun.png",
+      "Rocket Launcher": "/img/rocket_launcher.png",
+      "Lightning Gun": "/img/lightinggun.png",
+      "Railgun": "/img/railgun.png",
+      "Tribolt": "/img/tribolt.png",
+    };
+    return map[name] || `/img/${name.toLowerCase().replace(/ /g, "_")}.png`;
+  };
 
   return (
     <div className={styles.playerCard}>

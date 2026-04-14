@@ -83,8 +83,22 @@ export default function PublicWallPage() {
     const valClass = (a: number, b: number) =>
       a > b ? styles.valHigher : a < b ? styles.valLower : styles.valEqual;
 
-    const wIcon = (name: string) =>
-      `/img/${name.toLowerCase().replace(/ /g, "_").replace("lightning", "lighting")}.png`;
+    const wIcon = (name: string) => {
+      const map: Record<string, string> = {
+        "Gauntlet": "/img/gauntlet.png",
+        "Machine Gun": "/img/machine_gun.png",
+        "Super Machine Gun": "/img/super_machine_gun.png",
+        "Shotgun": "/img/shotgun.png",
+        "Super Shotgun": "/img/super_shotgun.png",
+        "Nail Gun": "/img/nailgun.png",
+        "Super Nailgun": "/img/super_nailgun.png",
+        "Rocket Launcher": "/img/rocket_launcher.png",
+        "Lightning Gun": "/img/lightinggun.png",
+        "Railgun": "/img/railgun.png",
+        "Tribolt": "/img/tribolt.png",
+      };
+      return map[name] || `/img/${name.toLowerCase().replace(/ /g, "_")}.png`;
+    };
 
     const allWeaponNames = new Set<string>();
     p1?.weapon_stats?.forEach(w => { if (w.damage > 0 || w.kills > 0) allWeaponNames.add(w.weapon_name); });
