@@ -33,8 +33,9 @@ export default function LandingPage() {
           </h1>
 
           <p className={styles.heroSubtitle}>
-            Upload your post-match screenshot. <em>We extract the data.</em>{" "}
-            Track your accuracy, dominate your rivals, and own the arena.
+            Wrzuć screenshot po meczu.{" "}
+            <em>My wyciągniemy dane.</em>{" "}
+            Śledź celność, dominuj rywali i rządź na arenie.
           </p>
 
           <div className={styles.heroActions}>
@@ -52,11 +53,11 @@ export default function LandingPage() {
           <div className={styles.statsStrip}>
             <div className={styles.statsStripItem}>
               <div className={styles.statsStripValue}>11</div>
-              <div className={styles.statsStripLabel}>Weapons Tracked</div>
+              <div className={styles.statsStripLabel}>Śledzonych broni</div>
             </div>
             <div className={styles.statsStripItem}>
               <div className={styles.statsStripValue}>40+</div>
-              <div className={styles.statsStripLabel}>Stats Per Match</div>
+              <div className={styles.statsStripLabel}>Statystyk na mecz</div>
             </div>
             <div className={styles.statsStripItem}>
               <div className={styles.statsStripValue}>AI</div>
@@ -64,7 +65,7 @@ export default function LandingPage() {
             </div>
             <div className={styles.statsStripItem}>
               <div className={styles.statsStripValue}>🔒</div>
-              <div className={styles.statsStripLabel}>Invite-Only</div>
+              <div className={styles.statsStripLabel}>Tylko z zaproszeniem</div>
             </div>
           </div>
         </div>
@@ -73,14 +74,14 @@ export default function LandingPage() {
       {/* ═══════════ FEATURES ═══════════ */}
       <section className={styles.features}>
         <div className={styles.featuresHeader}>
-          <div className={styles.sectionLabel}>// Features</div>
-          <h2 className={styles.sectionTitle}>Built for Fraggers</h2>
+          <div className={styles.sectionLabel}>// Funkcje</div>
+          <h2 className={styles.sectionTitle}>Stworzone dla Fraggerów</h2>
         </div>
 
         <div className={styles.featuresGrid}>
           <div className={styles.featureCard}>
             <span className={styles.featureIcon}>🤖</span>
-            <h3 className={styles.featureTitle}>AI Screenshot OCR</h3>
+            <h3 className={styles.featureTitle}>AI rozpoznawanie screenshotów</h3>
             <p className={styles.featureDesc}>
               Wklej screenshot z Ctrl+V lub przeciągnij. Gemini Vision AI
               odczytuje wszystkie staty, bronie, celność i damage automatycznie.
@@ -98,7 +99,7 @@ export default function LandingPage() {
 
           <div className={styles.featureCard}>
             <span className={styles.featureIcon}>⚔️</span>
-            <h3 className={styles.featureTitle}>Head-to-Head</h3>
+            <h3 className={styles.featureTitle}>Porównania 1 na 1</h3>
             <p className={styles.featureDesc}>
               Porównaj się z każdym rywalem. Historia meczów, win rate
               i statystyki broni w bezpośredniej konfrontacji.
@@ -190,7 +191,7 @@ export default function LandingPage() {
         <div className={styles.trustGrid}>
           <div className={styles.trustCard}>
             <div className={styles.trustIcon}>📨</div>
-            <h3>Invite-Only</h3>
+            <h3>Tylko z zaproszeniem</h3>
             <p>Każdy gracz musi być zaproszony przez kogoś kto już jest w społeczności. Żadnych anonimowych rejestracji.</p>
           </div>
           <div className={styles.trustCard}>
@@ -225,7 +226,7 @@ export default function LandingPage() {
       <section className={styles.weaponsSection}>
         <div className={styles.featuresHeader}>
           <div className={styles.sectionLabel}>// Arsenal</div>
-          <h2 className={styles.sectionTitle}>Every Weapon Tracked</h2>
+          <h2 className={styles.sectionTitle}>Pełna statystyka broni</h2>
         </div>
 
         <div className={styles.weaponsList}>
@@ -244,8 +245,8 @@ export default function LandingPage() {
       {/* ═══════════ FOOTER ═══════════ */}
       <footer className={styles.footer}>
         <p className={styles.footerText}>
-          QCStats – Built with <span className={styles.heart}>♥</span> by the
-          Quake community // Not affiliated with Bethesda or id Software
+          QCStats – Stworzone z <span className={styles.heart}>♥</span> przez
+          społeczność Quake&apos;a // Nie jest powiązane z Bethesda ani id Software
         </p>
       </footer>
     </div>
