@@ -39,7 +39,7 @@ export default function HistoryContent({ matches }: Props) {
     <div className={styles.historyPage}>
       <div className={styles.header}>
         <h1>
-          📋 <span className={styles.accent}>Match</span> History
+          📋 <span className={styles.accent}>Historia</span> Meczy
         </h1>
         <div className={styles.headerActions}>
           {matches.length > 0 && (
@@ -71,7 +71,7 @@ export default function HistoryContent({ matches }: Props) {
             </button>
           )}
           <Link href="/dashboard/upload" className={styles.uploadBtn}>
-            📸 Upload New
+            📸 Nowy Upload
           </Link>
         </div>
       </div>
@@ -79,26 +79,26 @@ export default function HistoryContent({ matches }: Props) {
       {matches.length === 0 ? (
         <div className={styles.emptyState}>
           <span className={styles.emptyIcon}>🏟️</span>
-          <h3>No matches recorded yet</h3>
-          <p>Upload your first QC ranking screenshot to begin tracking.</p>
+          <h3>Brak zarejestrowanych meczy</h3>
+          <p>Wrzuć swój pierwszy screenshot z QC, aby rozpocząć śledzenie.</p>
           <Link href="/dashboard/upload" className={styles.ctaBtn}>
-            ⚡ Upload Screenshot
+            ⚡ Wrzuć Screenshot
           </Link>
         </div>
       ) : (
         <>
           <div className={styles.matchCount}>
-            {matches.length} match{matches.length !== 1 ? "es" : ""} recorded
+            {matches.length} {matches.length === 1 ? 'mecz' : matches.length < 5 ? 'mecze' : 'meczy'} zarejestrowanych
           </div>
 
           <div className={styles.matchTable}>
             <div className={styles.tableHeader}>
-              <span>Date</span>
-              <span>Player 1</span>
-              <span>Score</span>
-              <span>Player 2</span>
-              <span>Map</span>
-              <span>Acc%</span>
+              <span>Data</span>
+              <span>Gracz 1</span>
+              <span>Wynik</span>
+              <span>Gracz 2</span>
+              <span>Mapa</span>
+              <span>Cel%</span>
               <span>Dmg</span>
             </div>
 

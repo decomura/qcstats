@@ -62,7 +62,10 @@ export default function UploadPage() {
   const [bulkPublishToWall, setBulkPublishToWall] = useState(true);
   const [bulkDescription, setBulkDescription] = useState("");
 
-  // Check game nickname on mount
+  // Daily usage tracking
+  const [dailyUsage, setDailyUsage] = useState<{ used: number; limit: number } | null>(null);
+
+  // Check game nickname and daily usage on mount
   useEffect(() => {
     const checkNickname = async () => {
       setNicknameChecking(true);
@@ -71,6 +74,23 @@ export default function UploadPage() {
       if (user) {
         const nick = await getUserGameNickname(user.id);
         setGameNicknameState(nick);
+
+        // Fetch daily usage
+        const today = new Date().toISOString().slice(0, 10);
+        const { count } = await supabase
+          .from("matches")
+          .select("*", { count: "exact", head: true })
+          .eq("uploaded_by", user.id)
+          .gte("created_at", today + "T00:00:00Z");
+        
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", user.id)
+          .single();
+        
+        const limit = profile?.role === "admin" ? 100 : 30;
+        setDailyUsage({ used: count ?? 0, limit });
       }
       setNicknameChecking(false);
     };
@@ -437,6 +457,28 @@ export default function UploadPage() {
         <div className={styles.nicknameBadge}>
           🎮 Twoja ksywka: <strong>{gameNickname}</strong>
           <span className={styles.nicknameBadgeHint}>— ta ksywka musi być widoczna na screenie</span>
+          {dailyUsage && (
+            <span className={styles.dailyCounter} style={{
+              marginLeft: "auto",
+              padding: "0.25rem 0.75rem",
+              borderRadius: "999px",
+              fontSize: "0.8rem",
+              fontWeight: 600,
+              background: dailyUsage.used >= dailyUsage.limit 
+                ? "rgba(255,60,60,0.2)" 
+                : dailyUsage.used >= dailyUsage.limit * 0.8 
+                  ? "rgba(255,180,0,0.2)" 
+                  : "rgba(0,255,128,0.15)",
+              color: dailyUsage.used >= dailyUsage.limit 
+                ? "#ff6b6b" 
+                : dailyUsage.used >= dailyUsage.limit * 0.8 
+                  ? "#ffc107" 
+                  : "#4caf50",
+              border: `1px solid ${dailyUsage.used >= dailyUsage.limit ? "rgba(255,60,60,0.3)" : "rgba(255,255,255,0.1)"}`,
+            }}>
+              📊 {dailyUsage.used}/{dailyUsage.limit} dziś
+            </span>
+          )}
         </div>
       )}
 

@@ -133,7 +133,7 @@ export default function PublicWallPage() {
     }).sort((a, b) => b.totalDmg - a.totalDmg);
 
     return (
-      <article key={post.id} className={`${styles.postCard} ${isNested ? styles.nestedCard : ""}`}>
+      <article key={post.id} id={`match-${post.id}`} className={`${styles.postCard} ${isNested ? styles.nestedCard : ""}`}>
         {!isNested && (
           <div className={styles.postHeader}>
             <div className={styles.postAuthor}>

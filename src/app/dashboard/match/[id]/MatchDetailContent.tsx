@@ -41,6 +41,7 @@ interface Match {
   match_date: string;
   created_at: string;
   uploaded_by: string;
+  is_public: boolean;
   match_players: MatchPlayer[];
 }
 
@@ -60,9 +61,32 @@ export default function MatchDetailContent({ match }: { match: Match }) {
       <div className={styles.breadcrumb}>
         <Link href="/dashboard">Dashboard</Link>
         <span>/</span>
-        <Link href="/dashboard/history">History</Link>
+        <Link href="/dashboard/history">Historia</Link>
         <span>/</span>
-        <span className={styles.current}>Match Detail</span>
+        <span className={styles.current}>Szczegóły meczu</span>
+        {match.is_public && (
+          <Link 
+            href={`/wall#match-${match.id}`}
+            className={styles.wallLink}
+            style={{
+              marginLeft: "auto",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "0.4rem",
+              padding: "0.3rem 0.8rem",
+              borderRadius: "6px",
+              background: "rgba(255,107,0,0.15)",
+              color: "#ff6b00",
+              border: "1px solid rgba(255,107,0,0.3)",
+              fontSize: "0.85rem",
+              fontWeight: 600,
+              textDecoration: "none",
+              transition: "all 0.2s",
+            }}
+          >
+            🏟️ Zobacz na Wall
+          </Link>
+        )}
       </div>
 
       {/* ─── Score Header ─── */}

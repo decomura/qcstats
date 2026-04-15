@@ -28,6 +28,7 @@ export default async function MatchDetailPage({ params }: PageProps) {
       match_date,
       created_at,
       uploaded_by,
+      is_public,
       match_players(
         id,
         player_nick,
