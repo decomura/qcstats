@@ -16,7 +16,38 @@ export default async function HistoryPage() {
 
   if (!user) redirect("/login");
 
-  // Fetch all matches for this user
+  // Get user's game nickname for matching
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("game_nickname, username")
+    .eq("id", user.id)
+    .single();
+
+  const gameNick = profile?.game_nickname || profile?.username || "";
+
+  // Fetch matches where user is a player (by profile_id link OR by nickname)
+  // Step 1: Get match IDs where user appears in match_players
+  const { data: playerMatches } = await supabase
+    .from("match_players")
+    .select("match_id")
+    .or(`profile_id.eq.${user.id}${gameNick ? `,player_nick.ilike.${gameNick}` : ""}`);
+
+  // Step 2: Also get matches uploaded by user (fallback)
+  const { data: uploadedMatches } = await supabase
+    .from("matches")
+    .select("id")
+    .eq("uploaded_by", user.id);
+
+  // Combine unique match IDs
+  const matchIds = new Set<string>();
+  playerMatches?.forEach(pm => matchIds.add(pm.match_id));
+  uploadedMatches?.forEach(m => matchIds.add(m.id));
+
+  if (matchIds.size === 0) {
+    return <HistoryContent matches={[]} />;
+  }
+
+  // Fetch full match data for all found IDs
   const { data: matches } = await supabase
     .from("matches")
     .select(`
@@ -27,6 +58,7 @@ export default async function HistoryPage() {
       screenshot_url,
       match_date,
       created_at,
+      uploaded_by,
       match_players(
         player_nick,
         side,
@@ -42,7 +74,7 @@ export default async function HistoryPage() {
         champion
       )
     `)
-    .eq("uploaded_by", user.id)
+    .in("id", Array.from(matchIds))
     .order("created_at", { ascending: false });
 
   return <HistoryContent matches={matches || []} />;

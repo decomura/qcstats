@@ -43,6 +43,7 @@ If the screenshot IS from a DUEL match, return a JSON object with this structure
 {
   "gameMode": "duel",
   "isDuel": true,
+  "mapName": "string (map name visible in the screenshot header/footer area. Known QC duel maps: Blood Covenant, Ruins of Sarnath, Awoken, Vale of Pnath, Corrupted Keep, Deep Embrace, Exile, Molten Falls. If not visible, use empty string)",
   "player1": {
     "nick": "string (left player's nickname, exact as shown)",
     "score": 0,
@@ -100,6 +101,22 @@ IMPORTANT RULES:
 - If the image is NOT a Quake Champions screenshot at all, return: { "gameMode": "unknown", "isDuel": false, "reason": "Not a Quake Champions screenshot" }
 - Return ONLY the JSON, nothing else`;
 
+// ═══════════ Rate Limiting (in-memory) ═══════════
+const rateLimitMap = new Map<string, number[]>();
+const RATE_LIMIT_WINDOW = 60_000; // 1 minute
+const RATE_LIMIT_MAX = 10; // max requests per window
+
+function checkRateLimit(userId: string): boolean {
+  const now = Date.now();
+  const timestamps = (rateLimitMap.get(userId) || [])
+    .filter(t => now - t < RATE_LIMIT_WINDOW);
+  
+  if (timestamps.length >= RATE_LIMIT_MAX) return false;
+  timestamps.push(now);
+  rateLimitMap.set(userId, timestamps);
+  return true;
+}
+
 export async function POST(request: NextRequest) {
   if (!GEMINI_API_KEY) {
     return NextResponse.json(
@@ -115,6 +132,43 @@ export async function POST(request: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Rate limit check (10 req/min/user)
+    if (!checkRateLimit(user.id)) {
+      return NextResponse.json(
+        { error: "Zbyt wiele żądań. Odczekaj chwilę (max 10/min).", remaining: 0 },
+        { status: 429 }
+      );
+    }
+
+    // Daily upload limit check
+    const today = new Date().toISOString().slice(0, 10);
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+    
+    const DAILY_LIMIT = profile?.role === "admin" ? 100 : 30;
+    
+    const { count } = await supabase
+      .from("matches")
+      .select("*", { count: "exact", head: true })
+      .eq("uploaded_by", user.id)
+      .gte("created_at", today + "T00:00:00Z");
+    
+    const usedToday = count ?? 0;
+    if (usedToday >= DAILY_LIMIT) {
+      return NextResponse.json(
+        { 
+          error: `Osiągnięto dzienny limit ${DAILY_LIMIT} screenshotów. Spróbuj jutro.`,
+          remaining: 0,
+          limit: DAILY_LIMIT,
+          used: usedToday
+        },
+        { status: 429 }
+      );
     }
 
     const { image } = await request.json();
