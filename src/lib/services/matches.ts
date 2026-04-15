@@ -73,6 +73,7 @@ export interface SaveMatchResult {
   matchId?: string;
   error?: string;
   isDuplicate?: boolean;
+  isCrossVerified?: boolean;
   nickAnalysis?: {
     player1: NickAnalysisResult;
     player2: NickAnalysisResult;
@@ -111,17 +112,26 @@ async function uploadScreenshot(
 
   return urlData.publicUrl;
 }
-
 /**
- * Check if a similar match already exists (duplicate detection)
- * Matches on: both player nicks + scores within same day
+ * Duplicate detection with cross-verification support.
+ * 
+ * Returns:
+ * - 'none': no duplicate found → proceed with new match
+ * - 'same_user': same user uploaded this match before → reject
+ * - 'cross_verified': different user confirmed same match → upgrade trust
  */
-async function checkDuplicate(
+interface DuplicateCheckResult {
+  type: 'none' | 'same_user' | 'cross_verified';
+  existingMatchId?: string;
+}
+
+async function checkDuplicateOrCrossVerify(
   p1Nick: string,
   p2Nick: string,
   p1Score: number,
-  p2Score: number
-): Promise<boolean> {
+  p2Score: number,
+  currentUserId: string
+): Promise<DuplicateCheckResult> {
   const supabase = createClient();
 
   // Look for match with same players and scores in last 24h
@@ -131,6 +141,8 @@ async function checkDuplicate(
     .from("matches")
     .select(`
       id,
+      uploaded_by,
+      trust_level,
       player1_score,
       player2_score,
       match_players!inner(player_nick)
@@ -139,9 +151,9 @@ async function checkDuplicate(
     .eq("player1_score", p1Score)
     .eq("player2_score", p2Score);
 
-  if (!data || data.length === 0) return false;
+  if (!data || data.length === 0) return { type: 'none' };
 
-  // Check if player nicks match
+  // Check if player nicks match (case-insensitive)
   for (const match of data) {
     const nicks = (match.match_players as { player_nick: string }[]).map(
       (mp) => mp.player_nick.toLowerCase()
@@ -150,11 +162,20 @@ async function checkDuplicate(
       nicks.includes(p1Nick.toLowerCase()) &&
       nicks.includes(p2Nick.toLowerCase())
     ) {
-      return true;
+      // Same match found — is it from the same user?
+      if (match.uploaded_by === currentUserId) {
+        return { type: 'same_user', existingMatchId: match.id };
+      }
+      // Different user → cross-verification opportunity
+      if (match.trust_level !== 'verified') {
+        return { type: 'cross_verified', existingMatchId: match.id };
+      }
+      // Already verified — treat as duplicate for this user
+      return { type: 'same_user', existingMatchId: match.id };
     }
   }
 
-  return false;
+  return { type: 'none' };
 }
 
 /**
@@ -266,13 +287,38 @@ export async function saveMatch(
   const p1Score = editedData?.player1Score ?? ocrResult.player1.score;
   const p2Score = editedData?.player2Score ?? ocrResult.player2.score;
 
-  // 1. Check for duplicates
-  const isDuplicate = await checkDuplicate(p1Nick, p2Nick, p1Score, p2Score);
-  if (isDuplicate) {
+  // 1. Check for duplicates / cross-verification
+  const dupCheck = await checkDuplicateOrCrossVerify(p1Nick, p2Nick, p1Score, p2Score, userId);
+  
+  if (dupCheck.type === 'same_user') {
     return {
       success: false,
       isDuplicate: true,
-      error: "This match appears to already exist in the database.",
+      error: "Ten mecz już istnieje w bazie danych.",
+    };
+  }
+
+  if (dupCheck.type === 'cross_verified' && dupCheck.existingMatchId) {
+    // Cross-verify: upload second screenshot and mark as verified
+    let screenshot2Url: string | null = null;
+    if (screenshotFile) {
+      screenshot2Url = await uploadScreenshot(screenshotFile, userId);
+    }
+
+    await supabase
+      .from("matches")
+      .update({
+        trust_level: 'verified',
+        verified_by: userId,
+        verified_at: new Date().toISOString(),
+        screenshot_url_2: screenshot2Url,
+      })
+      .eq("id", dupCheck.existingMatchId);
+
+    return {
+      success: true,
+      matchId: dupCheck.existingMatchId,
+      isCrossVerified: true,
     };
   }
 

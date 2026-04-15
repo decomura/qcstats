@@ -144,7 +144,23 @@ export default function PublicWallPage() {
                 {post.uploader_username || "Anonim"}
               </a>
             </div>
-            <span className={styles.postTime}>{timeAgo(post.created_at)}</span>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              {post.trust_level === "verified" && (
+                <span title="Zweryfikowany krzyżowo — dwóch graczy potwierdziło ten mecz" style={{
+                  padding: "0.15rem 0.5rem",
+                  borderRadius: "999px",
+                  fontSize: "0.7rem",
+                  fontWeight: 700,
+                  background: "rgba(0,200,100,0.15)",
+                  color: "#00c864",
+                  border: "1px solid rgba(0,200,100,0.3)",
+                  letterSpacing: "0.03em",
+                }}>
+                  ✅ Zweryfikowany
+                </span>
+              )}
+              <span className={styles.postTime}>{timeAgo(post.created_at)}</span>
+            </div>
           </div>
         )}
 

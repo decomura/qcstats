@@ -339,6 +339,12 @@ export default function UploadPage() {
 
       const saveResult = await saveMatch(result, imageFile, user.id, undefined, description, publishToWall);
 
+      if (saveResult.isCrossVerified) {
+        setSavedMatchId(saveResult.matchId || null);
+        setStage("saved");
+        return;
+      }
+
       if (saveResult.isDuplicate) {
         setError("Ten mecz już istnieje w bazie danych. Wykryto duplikat!");
         setStage("error");

@@ -21,6 +21,7 @@ export interface WallPost {
   created_at: string;
   match_date: string;
   uploaded_by: string;
+  trust_level: string | null;
   uploader_username: string | null;
   uploader_avatar: string | null;
   match_group_id: string | null;
@@ -102,6 +103,7 @@ export async function fetchWallPosts(
       created_at,
       match_date,
       uploaded_by,
+      trust_level,
       match_group_id,
       profiles:uploaded_by(username, avatar_url),
       match_players(
@@ -201,6 +203,7 @@ export async function fetchWallPosts(
       created_at: m.created_at,
       match_date: m.match_date,
       uploaded_by: m.uploaded_by,
+      trust_level: (m as Record<string, unknown>).trust_level as string | null,
       match_group_id: (m as Record<string, unknown>).match_group_id as string | null,
       uploader_username: profile?.username || null,
       uploader_avatar: profile?.avatar_url || null,
