@@ -17,28 +17,28 @@ export default function CompareContent({ opponents }: { opponents: Opponent[] })
     <div className={styles.page}>
       <div className={styles.header}>
         <h1>
-          ⚔️ <span className={styles.accent}>Head-to-Head</span> Compare
+          ⚔️ <span className={styles.accent}>Porównanie</span> 1 na 1
         </h1>
       </div>
 
       {opponents.length === 0 ? (
         <div className={styles.emptyState}>
           <span className={styles.emptyIcon}>⚔️</span>
-          <h3>No opponents yet</h3>
-          <p>Upload match screenshots to build your rivalry database.</p>
+          <h3>Brak przeciwników</h3>
+          <p>Wrzuć screenshoty z meczy, aby budować bazę rywalizacji.</p>
           <Link href="/dashboard/upload" className={styles.ctaBtn}>
-            ⚡ Upload Screenshot
+            ⚡ Wrzuć Screenshot
           </Link>
         </div>
       ) : (
         <div className={styles.opponentList}>
           <div className={styles.listHeader}>
-            <span>Opponent</span>
-            <span>Matches</span>
-            <span>Record</span>
-            <span>Win %</span>
-            <span>Avg Acc</span>
-            <span>Avg Dmg</span>
+            <span>Przeciwnik</span>
+            <span>Mecze</span>
+            <span>Bilans</span>
+            <span>Wygr. %</span>
+            <span>Cel %</span>
+            <span>Śr. Dmg</span>
           </div>
 
           {opponents.map((opp) => {

@@ -125,7 +125,7 @@ export default function UploadPage() {
 
   const handleFile = useCallback((file: File) => {
     if (!file.type.startsWith("image/")) {
-      setError("Only image files are accepted");
+      setError("Akceptowane są tylko pliki graficzne");
       setStage("error");
       return;
     }
@@ -223,14 +223,14 @@ export default function UploadPage() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        setError("You must be logged in.");
+        setError("Musisz być zalogowany.");
         setStage("error");
         return;
       }
 
       const successItems = bulkItems.filter(item => item.status === "done" && item.result);
       if (successItems.length === 0) {
-        setError("No screenshots were processed successfully.");
+        setError("Żaden screenshot nie został przetworzony pomyślnie.");
         setStage("error");
         return;
       }
@@ -527,13 +527,13 @@ export default function UploadPage() {
       {stage === "preview" && imageUrl && (
         <div className={styles.previewSection}>
           <div className={styles.previewHeader}>
-            <h2>📋 Screenshot Preview</h2>
+            <h2>📋 Podgląd screenshota</h2>
             <div className={styles.previewActions}>
               <button className={styles.btnCancel} onClick={reset}>
-                ✕ Cancel
+                ✕ Anuluj
               </button>
               <button className={styles.btnSave} onClick={startOCR}>
-                ⚡ PROCESS OCR
+                ⚡ ROZPOZNAJ
               </button>
             </div>
           </div>
@@ -560,17 +560,17 @@ export default function UploadPage() {
       {stage === "results" && result && (
         <div className={styles.previewSection}>
           <div className={styles.previewHeader}>
-            <h2>📊 Extracted Data</h2>
+            <h2>📊 Wyodrębnione dane</h2>
             <div className={styles.previewActions}>
               <button className={styles.btnCancel} onClick={reset}>
-                ↩ New Upload
+                ↩ Nowy upload
               </button>
               <button
                 className={styles.btnSave}
                 onClick={handleSave}
                 disabled={result.confidence < 30}
               >
-                💾 SAVE MATCH
+                💾 ZAPISZ MECZ
               </button>
             </div>
           </div>
@@ -651,7 +651,7 @@ export default function UploadPage() {
                 : result.confidence >= 50
                   ? "⚠️"
                   : "❌"}{" "}
-              Confidence: {result.confidence}%
+              Pewność: {result.confidence}%
             </div>
 
             {/* Warnings */}

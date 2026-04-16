@@ -150,8 +150,8 @@ function LoginContent() {
         {/* Invalid/expired invite — non-blocking info */}
         {inviteToken && inviteValid === false && !inviteChecking && (
           <div className={styles.inviteBannerError}>
-            ℹ️ This invite link is invalid or expired. You can still log in
-            if you already have an account.
+            ℹ️ Ten link zaproszeniowy jest nieprawidłowy lub wygasł. Możesz się zalogować,
+            jeśli masz już konto.
           </div>
         )}
 

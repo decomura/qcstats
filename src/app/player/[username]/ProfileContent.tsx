@@ -53,7 +53,7 @@ export default function ProfileContent({ profile, stats, recentMatches }: Props)
 
   return (
     <div className={styles.page}>
-      <Link href="/" className={styles.backLink}>← Back to QCStats</Link>
+      <Link href="/" className={styles.backLink}>← Powrót do QCStats</Link>
 
       {/* ─── Profile Header ─── */}
       <div className={styles.profileHeader}>
@@ -65,7 +65,7 @@ export default function ProfileContent({ profile, stats, recentMatches }: Props)
           <div className={styles.profileMeta}>
             <span className={styles.username}>@{profile.username}</span>
             <span className={styles.role}>{roleLabel}</span>
-            <span className={styles.since} suppressHydrationWarning>Member since {new Date(stats.memberSince).toLocaleDateString("en-US", { month: "long", year: "numeric" })}</span>
+            <span className={styles.since} suppressHydrationWarning>Członek od {new Date(stats.memberSince).toLocaleDateString("pl-PL", { month: "long", year: "numeric" })}</span>
           </div>
         </div>
       </div>
@@ -74,43 +74,43 @@ export default function ProfileContent({ profile, stats, recentMatches }: Props)
       <div className={styles.statsGrid}>
         <div className={styles.statCard}>
           <div className={styles.statValue}>{stats.totalMatches}</div>
-          <div className={styles.statLabel}>Matches</div>
+          <div className={styles.statLabel}>Mecze</div>
         </div>
         <div className={styles.statCard}>
           <div className={`${styles.statValue} ${(stats.winRate ?? 0) >= 50 ? styles.green : styles.red}`}>
             {stats.winRate !== null ? `${stats.winRate}%` : "—"}
           </div>
-          <div className={styles.statLabel}>Win Rate</div>
+          <div className={styles.statLabel}>Wygrane</div>
           <div className={styles.statSub}>{stats.wins}W / {stats.losses}L</div>
         </div>
         <div className={styles.statCard}>
           <div className={styles.statValue}>{stats.avgLgAccuracy !== null ? `${stats.avgLgAccuracy}%` : "—"}</div>
-          <div className={styles.statLabel}>⚡ LG Accuracy</div>
+          <div className={styles.statLabel}>⚡ Celność LG</div>
         </div>
         <div className={styles.statCard}>
           <div className={styles.statValue}>{stats.avgRailAccuracy !== null ? `${stats.avgRailAccuracy}%` : "—"}</div>
-          <div className={styles.statLabel}>🔫 Rail Accuracy</div>
+          <div className={styles.statLabel}>🔫 Celność Rail</div>
         </div>
         <div className={styles.statCard}>
           <div className={styles.statValue}>{stats.avgAccuracy !== null ? `${stats.avgAccuracy}%` : "—"}</div>
-          <div className={styles.statLabel}>Overall Accuracy</div>
+          <div className={styles.statLabel}>Ogólna celność</div>
         </div>
         <div className={styles.statCard}>
           <div className={styles.statValue}>
             {stats.totalDamage > 1000 ? `${(stats.totalDamage / 1000).toFixed(1)}k` : stats.totalDamage}
           </div>
-          <div className={styles.statLabel}>💥 Total Damage</div>
+          <div className={styles.statLabel}>💥 Łączne obrażenia</div>
         </div>
       </div>
 
       {/* ─── Recent Matches ─── */}
       {recentMatches.length > 0 && (
         <div className={styles.section}>
-          <h2>Recent Matches</h2>
+          <h2>Ostatnie mecze</h2>
           <div className={styles.matchList}>
             {recentMatches.map((m, i) => {
               const opponent = m.match.match_players.find((p) => p.side !== m.side);
-              const date = new Date(m.match.match_date).toLocaleDateString("en-US", {
+              const date = new Date(m.match.match_date).toLocaleDateString("pl-PL", {
                 day: "2-digit",
                 month: "short",
               });
@@ -119,7 +119,7 @@ export default function ProfileContent({ profile, stats, recentMatches }: Props)
                 <div key={i} className={styles.matchRow}>
                   <span className={styles.matchDate} suppressHydrationWarning>{date}</span>
                   <span className={`${styles.matchResult} ${m.is_winner ? styles.green : styles.red}`}>
-                    {m.is_winner ? "WIN" : "LOSS"}
+                    {m.is_winner ? "WYGRANA" : "PRZEGRANA"}
                   </span>
                   <span className={styles.matchScore}>
                     {m.match.player1_score}:{m.match.player2_score}

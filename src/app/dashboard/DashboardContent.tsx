@@ -75,22 +75,22 @@ export default function DashboardContent({
     <div className={styles.dashboard}>
       <div className={styles.header}>
         <h1>
-          Welcome, <span className={styles.accent}>{userName}</span>
+          Witaj, <span className={styles.accent}>{userName}</span>
         </h1>
         <Link href="/dashboard/upload" className={styles.uploadBtn}>
-          📸 Upload Screenshot
+          📸 Wrzuć Screenshot
         </Link>
       </div>
 
       {/* ─── Stats Grid ─── */}
       <div className={styles.statsGrid}>
         <StatCard
-          label="Matches Played"
+          label="Rozegrane mecze"
           value={stats.totalMatches.toString()}
           icon="🎯"
         />
         <StatCard
-          label="Win Rate"
+          label="Wygrane"
           value={stats.winRate !== null ? `${stats.winRate}%` : "—"}
           sub={hasData ? `${stats.wins}W / ${stats.losses}L` : undefined}
           icon="🏆"
@@ -103,7 +103,7 @@ export default function DashboardContent({
           }
         />
         <StatCard
-          label="Avg LG Accuracy"
+          label="Śr. celność LG"
           value={stats.avgLgAccuracy !== null ? `${stats.avgLgAccuracy}%` : "—"}
           icon="⚡"
           accent={
@@ -117,7 +117,7 @@ export default function DashboardContent({
           }
         />
         <StatCard
-          label="Avg Rail Accuracy"
+          label="Śr. celność Rail"
           value={
             stats.avgRailAccuracy !== null ? `${stats.avgRailAccuracy}%` : "—"
           }
@@ -133,12 +133,12 @@ export default function DashboardContent({
           }
         />
         <StatCard
-          label="Avg Accuracy"
+          label="Śr. celność"
           value={stats.avgAccuracy !== null ? `${stats.avgAccuracy}%` : "—"}
           icon="🎯"
         />
         <StatCard
-          label="Total Damage"
+          label="Łączne obrażenia"
           value={
             hasData
               ? stats.totalDamage > 1000
@@ -153,10 +153,10 @@ export default function DashboardContent({
       {/* ─── Recent Matches ─── */}
       <div className={styles.section}>
         <div className={styles.sectionHeader}>
-          <h2>Recent Matches</h2>
+          <h2>Ostatnie mecze</h2>
           {hasData && (
             <Link href="/dashboard/history" className={styles.viewAll}>
-              View All →
+              Pokaż wszystkie →
             </Link>
           )}
         </div>
@@ -170,7 +170,7 @@ export default function DashboardContent({
             </p>
             <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center', marginTop: '0.5rem' }}>
               <Link href="/dashboard/upload" className={styles.ctaBtn}>
-                📸 Upload Screenshot
+                📸 Wrzuć Screenshot
               </Link>
               <Link href="/wall" className={styles.ctaBtnSecondary || styles.viewAll}>
                 🏟️ Community Wall
@@ -231,7 +231,7 @@ export default function DashboardContent({
                     </span>
                   </div>
                   <div className={styles.matchMap}>
-                    {match.map_name || "Unknown Map"}
+                    {match.map_name || "Nieznana mapa"}
                   </div>
                 </Link>
               );

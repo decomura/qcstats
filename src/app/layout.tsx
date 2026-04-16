@@ -26,13 +26,13 @@ const orbitron = Orbitron({
 });
 
 export const metadata: Metadata = {
-  title: "QCStats – Quake Champions Stats Tracker",
+  title: "QCStats – Śledzenie statystyk Quake Champions",
   description:
-    "Track your Quake Champions duel statistics. Upload your post-match screenshot, analyze weapon accuracy, damage, and dominate the arena.",
-  keywords: ["quake champions", "stats", "tracker", "duel", "accuracy", "esports"],
+    "Śledź swoje statystyki z pojedynków Quake Champions. Wrzuć screenshot z ekranu wyników, analizuj celność broni, obrażenia i dominuj na arenie.",
+  keywords: ["quake champions", "statystyki", "tracker", "duel", "celność", "esports"],
   openGraph: {
-    title: "QCStats – Quake Champions Stats Tracker",
-    description: "Upload. Analyze. Dominate. Track your Quake Champions duel performance.",
+    title: "QCStats – Śledzenie statystyk Quake Champions",
+    description: "Wrzuć. Analizuj. Dominuj. Śledź swoje wyniki z Quake Champions.",
     type: "website",
   },
 };
@@ -44,7 +44,7 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
+      lang="pl"
       className={`${rajdhani.variable} ${inter.variable} ${jetbrainsMono.variable} ${orbitron.variable}`}
     >
       <body className="scanline-overlay">{children}</body>

@@ -93,7 +93,7 @@ export default function MatchDetailContent({ match }: { match: Match }) {
       <div className={styles.scoreHeader}>
         <div className={styles.playerSide}>
           <div className={`${styles.playerName} ${p1?.is_winner ? styles.winner : styles.loser}`}>
-            {p1?.player_nick || "Player 1"}
+            {p1?.player_nick || "Gracz 1"}
           </div>
           {p1?.champion && <div className={styles.champion}>{p1.champion}</div>}
         </div>
@@ -116,7 +116,7 @@ export default function MatchDetailContent({ match }: { match: Match }) {
 
         <div className={styles.playerSide}>
           <div className={`${styles.playerName} ${p2?.is_winner ? styles.winner : styles.loser}`}>
-            {p2?.player_nick || "Player 2"}
+            {p2?.player_nick || "Gracz 2"}
           </div>
           {p2?.champion && <div className={styles.champion}>{p2.champion}</div>}
         </div>
@@ -131,12 +131,12 @@ export default function MatchDetailContent({ match }: { match: Match }) {
 
       {/* ─── Stats Comparison ─── */}
       <div className={styles.statsComparison}>
-        <h3>📊 Stats Comparison</h3>
+        <h3>📊 Porównanie statystyk</h3>
         <div className={styles.comparisonGrid}>
-          <ComparisonRow label="Damage" v1={p1?.total_damage || 0} v2={p2?.total_damage || 0} format="number" />
-          <ComparisonRow label="Accuracy" v1={p1?.accuracy_pct || 0} v2={p2?.accuracy_pct || 0} format="percent" />
-          <ComparisonRow label="Hits/Shots" v1={p1?.hits_shots || "—"} v2={p2?.hits_shots || "—"} format="text" />
-          <ComparisonRow label="Healing" v1={p1?.healing || 0} v2={p2?.healing || 0} format="number" />
+          <ComparisonRow label="Obrażenia" v1={p1?.total_damage || 0} v2={p2?.total_damage || 0} format="number" />
+          <ComparisonRow label="Celność" v1={p1?.accuracy_pct || 0} v2={p2?.accuracy_pct || 0} format="percent" />
+          <ComparisonRow label="Trafienia/Strzały" v1={p1?.hits_shots || "—"} v2={p2?.hits_shots || "—"} format="text" />
+          <ComparisonRow label="Leczenie" v1={p1?.healing || 0} v2={p2?.healing || 0} format="number" />
           <ComparisonRow label="Mega HP" v1={p1?.mega_health_pickups || 0} v2={p2?.mega_health_pickups || 0} format="number" />
           <ComparisonRow label="Heavy Armor" v1={p1?.heavy_armor_pickups || 0} v2={p2?.heavy_armor_pickups || 0} format="number" />
           <ComparisonRow label="Light Armor" v1={p1?.light_armor_pickups || 0} v2={p2?.light_armor_pickups || 0} format="number" />
@@ -146,7 +146,7 @@ export default function MatchDetailContent({ match }: { match: Match }) {
 
       {/* ─── Weapons Side-by-Side ─── */}
       <div className={styles.weaponsSection}>
-        <h3>🔫 Weapon Breakdown</h3>
+        <h3>🔫 Statystyki broni</h3>
         <div className={styles.weaponsGrid}>
           <div className={styles.weaponTable}>
             <div className={styles.weaponTableHeader}>
@@ -221,7 +221,7 @@ function WeaponTable({ weapons }: { weapons: WeaponStat[] }) {
   return (
     <div className={styles.wTable}>
       <div className={styles.wRow + " " + styles.wHeader}>
-        <span>Weapon</span>
+        <span>Broń</span>
         <span>H/S</span>
         <span>Acc</span>
         <span>Dmg</span>

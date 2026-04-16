@@ -67,7 +67,7 @@ export default function HistoryContent({ matches }: Props) {
                 downloadCSV(csv);
               }}
             >
-              📥 Export CSV
+              📥 Eksportuj CSV
             </button>
           )}
           <Link href="/dashboard/upload" className={styles.uploadBtn}>

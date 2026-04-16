@@ -32,7 +32,7 @@ export default function NotFound() {
           marginBottom: "1rem",
         }}
       >
-        404 — Page Not Found
+        404 — Strona nie znaleziona
       </h2>
       <p
         style={{
@@ -43,8 +43,8 @@ export default function NotFound() {
           marginBottom: "2rem",
         }}
       >
-        This page got telefragged. There is nothing here.
-        Check the URL or go back to spawn.
+        Ta strona została telefragged. Nie ma tu niczego.
+        Sprawdź URL lub wróć na spawn.
       </p>
       <Link
         href="/"
