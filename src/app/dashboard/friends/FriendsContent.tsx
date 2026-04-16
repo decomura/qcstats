@@ -278,7 +278,7 @@ export default function FriendsContent({ userId, inviteCountRemaining, displayNa
           value={searchName}
           onChange={(e) => setSearchName(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-          placeholder="Search by username..."
+          placeholder="Szukaj po nazwie użytkownika..."
           className={styles.searchInput}
         />
         <button onClick={handleSearch} className={styles.searchBtn} disabled={searching}>

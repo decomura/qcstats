@@ -114,7 +114,7 @@ export default function CommunityTreeContent({ profiles, currentUserId }: Props)
   return (
     <div className={styles.page}>
       <h1>
-        🌳 <span className={styles.accent}>Community</span> Tree
+        🌳 <span className={styles.accent}>Drzewko</span> społeczności
       </h1>
       <p className={styles.subtitle}>
         Drzewko zaproszeń — kto kogo zaprosił do QCStats

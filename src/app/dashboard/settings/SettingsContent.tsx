@@ -192,12 +192,12 @@ export default function SettingsContent({ profile, email }: Props) {
   return (
     <div className={styles.page}>
       <h1>
-        ⚙️ <span className={styles.accent}>Profile</span> Settings
+        ⚙️ <span className={styles.accent}>Ustawienia</span> profilu
       </h1>
 
       {/* ═══ GAME NICKNAME SECTION ═══ */}
       <div className={`${styles.section} ${styles.gameNicknameSection}`}>
-        <h2>🎮 Ksywka w grze (Game Nickname)</h2>
+        <h2>🎮 Ksywka w grze</h2>
         <div className={styles.gameNicknameWarning}>
           <span className={styles.warningIcon}>⚠️</span>
           <div>
@@ -265,7 +265,7 @@ export default function SettingsContent({ profile, email }: Props) {
         </div>
 
         <div className={styles.field}>
-          <label>Username (URL profilu)</label>
+          <label>Nazwa użytkownika (URL profilu)</label>
           <input
             type="text"
             value={username}

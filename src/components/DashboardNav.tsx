@@ -108,7 +108,7 @@ export default function DashboardNav({ user }: Props) {
             className={styles.bellBtn}
             onClick={() => { setBellOpen(!bellOpen); setMenuOpen(false); }}
             type="button"
-            aria-label="Notifications"
+            aria-label="Powiadomienia"
           >
             🔔
             {unreadCount > 0 && (
