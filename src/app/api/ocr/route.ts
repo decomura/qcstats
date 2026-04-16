@@ -180,16 +180,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Extract base64 and mime type
-    const match = image.match(/^data:(image\/\w+);base64,(.+)$/);
-    if (!match) {
+    // Validate image is a string and not excessively large
+    if (typeof image !== 'string') {
       return NextResponse.json(
-        { error: "Invalid image format. Expected data URL." },
+        { error: "Invalid image format." },
         { status: 400 }
       );
     }
 
-    const [, mimeType, base64Data] = match;
+    // Check base64 size (~10MB limit → base64 is ~1.37x bigger)
+    const MAX_BASE64_SIZE = 14_000_000; // ~10MB in base64
+    if (image.length > MAX_BASE64_SIZE) {
+      return NextResponse.json(
+        { error: "Obraz jest zbyt duży. Maksymalny rozmiar to 10MB." },
+        { status: 413 }
+      );
+    }
+
+    // Extract base64 and mime type
+    const match = image.match(/^data:(image\/(png|jpeg|webp));base64,(.+)$/);
+    if (!match) {
+      return NextResponse.json(
+        { error: "Nieprawidłowy format. Dozwolone: PNG, JPEG, WebP." },
+        { status: 400 }
+      );
+    }
+
+    const [, mimeType, , base64Data] = match;
 
     // Call Gemini API with retry for rate limits
     const requestBody = JSON.stringify({
@@ -245,8 +262,9 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      console.error(`[OCR API] Gemini error (${status}):`, errorData);
       return NextResponse.json(
-        { error: `Gemini API error (${status}): ${JSON.stringify(errorData)}` },
+        { error: `Wystąpił błąd przetwarzania obrazu. Spróbuj ponownie.` },
         { status: 502 }
       );
     }

@@ -5,19 +5,49 @@
  * Used by the login page to check if a registration link is valid.
  */
 import { createClient } from "@supabase/supabase-js";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export async function GET(request: Request) {
+// Rate limiting for token validation (prevent brute-force)
+const validateRateLimitMap = new Map<string, number[]>();
+const VALIDATE_RATE_WINDOW = 60_000; // 1 minute
+const VALIDATE_RATE_MAX = 20; // max 20 attempts per minute
+
+function checkValidateRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const timestamps = (validateRateLimitMap.get(ip) || [])
+    .filter(t => now - t < VALIDATE_RATE_WINDOW);
+  
+  if (timestamps.length >= VALIDATE_RATE_MAX) return false;
+  timestamps.push(now);
+  validateRateLimitMap.set(ip, timestamps);
+  return true;
+}
+
+export async function GET(request: NextRequest) {
+  // Rate limit by IP
+  const ip = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown";
+  if (!checkValidateRateLimit(ip)) {
+    return NextResponse.json(
+      { valid: false, error: "Too many requests. Try again later." },
+      { status: 429 }
+    );
+  }
+
   const { searchParams } = new URL(request.url);
   const token = searchParams.get("token");
 
   if (!token) {
     return NextResponse.json({ valid: false, error: "Missing token" });
+  }
+
+  // Sanitize token — only allow alphanumeric
+  if (!/^[A-Za-z0-9]+$/.test(token)) {
+    return NextResponse.json({ valid: false, error: "Invalid token format" });
   }
 
   try {

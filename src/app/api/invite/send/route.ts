@@ -9,6 +9,27 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import nodemailer from "nodemailer";
 
+// Rate Limiting: 5 invite emails per user per 10 minutes
+const inviteRateLimitMap = new Map<string, number[]>();
+const INVITE_RATE_WINDOW = 600_000; // 10 minutes
+const INVITE_RATE_MAX = 5;
+
+function checkInviteRateLimit(userId: string): boolean {
+  const now = Date.now();
+  const timestamps = (inviteRateLimitMap.get(userId) || [])
+    .filter(t => now - t < INVITE_RATE_WINDOW);
+  
+  if (timestamps.length >= INVITE_RATE_MAX) return false;
+  timestamps.push(now);
+  inviteRateLimitMap.set(userId, timestamps);
+  return true;
+}
+
+// Basic email format validation
+function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && email.length <= 254;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
@@ -20,11 +41,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Rate limit check
+    if (!checkInviteRateLimit(user.id)) {
+      return NextResponse.json(
+        { error: "Zbyt wiele zaproszeń. Odczekaj 10 minut." },
+        { status: 429 }
+      );
+    }
+
     const { email, token, inviterName } = await request.json();
 
     if (!email || !token) {
       return NextResponse.json(
         { error: "Email and token are required" },
+        { status: 400 }
+      );
+    }
+
+    if (!isValidEmail(email)) {
+      return NextResponse.json(
+        { error: "Nieprawidłowy format adresu email." },
         { status: 400 }
       );
     }
