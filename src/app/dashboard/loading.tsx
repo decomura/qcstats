@@ -29,7 +29,7 @@ export default function DashboardLoading() {
           letterSpacing: "2px",
         }}
       >
-        Loading Arena...
+        Ładowanie areny...
       </div>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>

@@ -6,7 +6,7 @@ import styles from "./dashboard.module.css";
 
 const StatsCharts = dynamic(() => import("@/components/charts/StatsCharts"), {
   ssr: false,
-  loading: () => <div style={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Loading charts...</div>,
+  loading: () => <div style={{ height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>Ładowanie wykresów...</div>,
 });
 
 interface MatchPlayer {
