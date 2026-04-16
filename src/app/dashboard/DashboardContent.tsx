@@ -173,7 +173,7 @@ export default function DashboardContent({
                 📸 Wrzuć Screenshot
               </Link>
               <Link href="/wall" className={styles.ctaBtnSecondary || styles.viewAll}>
-                🏟️ Community Wall
+                🏟️ Ściana społeczności
               </Link>
             </div>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '1rem' }}>

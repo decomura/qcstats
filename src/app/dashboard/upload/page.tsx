@@ -329,7 +329,7 @@ export default function UploadPage() {
 
       if (!validation.valid) {
         if (validation.error === "NICKNAME_NOT_SET") {
-          setError("Musisz ustawić ksywkę w grze (Game Nickname) w Ustawieniach zanim będziesz mógł zapisywać mecze.");
+          setError("Musisz ustawić ksywkę w grze w Ustawieniach zanim będziesz mógł zapisywać mecze.");
         } else {
           setError(`Twoja ksywka \"${gameNickname}\" nie została znaleziona na screenie. Na screenie widoczni są: \"${result.player1.nick}\" i \"${result.player2.nick}\". Możesz zapisywać tylko własne mecze.`);
         }
@@ -608,7 +608,7 @@ export default function UploadPage() {
                 onChange={(e) => setPublishToWall(e.target.checked)}
                 className={styles.checkbox}
               />
-              <span>📢 Publikuj na Community Wall</span>
+              <span>📢 Publikuj na ścianie społeczności</span>
             </label>
           </div>
 
@@ -743,7 +743,7 @@ export default function UploadPage() {
                 onChange={(e) => setBulkPublishToWall(e.target.checked)}
                 className={styles.checkbox}
               />
-              <span>📢 Publikuj na Community Wall</span>
+              <span>📢 Publikuj na ścianie społeczności</span>
             </label>
             {bulkPublishToWall && (
               <label className={styles.checkboxLabel}>
