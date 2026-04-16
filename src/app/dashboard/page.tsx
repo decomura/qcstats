@@ -13,11 +13,12 @@ export default async function DashboardPage() {
   // Fetch user profile for display name
   const { data: profile } = await supabase
     .from("profiles")
-    .select("username, display_name")
+    .select("username, display_name, game_nickname")
     .eq("id", user.id)
     .single();
 
   const displayName = profile?.display_name || profile?.username || user.email?.split("@")[0] || "Player";
+  const gameNick = profile?.game_nickname || profile?.username || "";
 
   // Fetch ALL matches uploaded by user (to get match IDs)
   const { data: userMatchIds } = await supabase
@@ -64,8 +65,11 @@ export default async function DashboardPage() {
     .order("created_at", { ascending: false })
     .limit(5);
 
-  // Calculate aggregated stats
-  const playerData = matchPlayers || [];
+  // Calculate aggregated stats — filter to only the USER's match_player rows
+  const allPlayerData = matchPlayers || [];
+  const playerData = gameNick
+    ? allPlayerData.filter((mp) => mp.player_nick.toLowerCase() === gameNick.toLowerCase())
+    : allPlayerData.filter((mp) => mp.side === 1); // fallback: side 1 = uploader
   const totalMatches = playerData.length;
   const wins = playerData.filter((m) => m.is_winner).length;
   const avgAccuracy =
@@ -77,6 +81,7 @@ export default async function DashboardPage() {
       : 0;
 
   // Weapon-specific stats
+  // Weapon stats — only from the user's match_player rows
   type WeaponRow = { weapon_name: string; accuracy_pct: number; damage: number; kills: number };
   const allWeapons = playerData.flatMap(
     (m) => (m.weapon_stats as WeaponRow[]) || []
@@ -114,11 +119,11 @@ export default async function DashboardPage() {
   // We need match dates - fetch from recentMatches (ordered by date)
   const allMatchesForChart = recentMatches || [];
   const accuracyChartData = allMatchesForChart.map((m) => {
-    const myPlayer = m.match_players.find(
-      (mp: { player_nick: string; side: number; score: number; is_winner: boolean; accuracy_pct: number; total_damage: number }) =>
-        // We uploaded this - find our player by profile link
-        mp.side === 1 || mp.side === 2
-    );
+    type MatchPlayerRow = { player_nick: string; side: number; score: number; is_winner: boolean; accuracy_pct: number; total_damage: number };
+    // Find OUR player row by game_nickname, fallback to side 1
+    const myPlayer = gameNick
+      ? m.match_players.find((mp: MatchPlayerRow) => mp.player_nick.toLowerCase() === gameNick.toLowerCase())
+      : m.match_players.find((mp: MatchPlayerRow) => mp.side === 1);
     const date = new Date(m.match_date).toLocaleDateString("pl-PL", { day: "2-digit", month: "short" });
     return {
       date,
