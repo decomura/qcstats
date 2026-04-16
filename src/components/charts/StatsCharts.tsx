@@ -58,7 +58,7 @@ export default function StatsCharts({ accuracyData, weaponData }: ChartProps) {
     <div className={styles.chartsContainer}>
       {/* ─── Accuracy Over Time ─── */}
       <div className={styles.chartCard}>
-        <h3 className={styles.chartTitle}>⚡ Accuracy Trend</h3>
+        <h3 className={styles.chartTitle}>⚡ Trend celności</h3>
         <ResponsiveContainer width="100%" height={280}>
           <LineChart data={accuracyData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
@@ -85,7 +85,7 @@ export default function StatsCharts({ accuracyData, weaponData }: ChartProps) {
               stroke={CHART_COLORS.accuracy}
               strokeWidth={2}
               dot={{ r: 3 }}
-              name="Overall"
+              name="Ogólna"
             />
             <Line
               type="monotone"
@@ -110,7 +110,7 @@ export default function StatsCharts({ accuracyData, weaponData }: ChartProps) {
       {/* ─── Weapon Kill Distribution ─── */}
       {weaponData.length > 0 && (
         <div className={styles.chartCard}>
-          <h3 className={styles.chartTitle}>🔫 Weapon Kills</h3>
+          <h3 className={styles.chartTitle}>🔫 Zabicia bronią</h3>
           <ResponsiveContainer width="100%" height={280}>
             <BarChart data={weaponData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
@@ -129,7 +129,7 @@ export default function StatsCharts({ accuracyData, weaponData }: ChartProps) {
                 fontFamily="var(--font-mono)"
               />
               <Tooltip contentStyle={tooltipStyle} />
-              <Bar dataKey="kills" fill={CHART_COLORS.accuracy} radius={[4, 4, 0, 0]} name="Kills" />
+              <Bar dataKey="kills" fill={CHART_COLORS.accuracy} radius={[4, 4, 0, 0]} name="Zabicia" />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -138,7 +138,7 @@ export default function StatsCharts({ accuracyData, weaponData }: ChartProps) {
       {/* ─── Damage Distribution ─── */}
       {weaponData.length > 0 && (
         <div className={styles.chartCard}>
-          <h3 className={styles.chartTitle}>💥 Weapon Damage</h3>
+          <h3 className={styles.chartTitle}>💥 Obrażenia broni</h3>
           <ResponsiveContainer width="100%" height={280}>
             <BarChart data={weaponData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
@@ -157,7 +157,7 @@ export default function StatsCharts({ accuracyData, weaponData }: ChartProps) {
                 fontFamily="var(--font-mono)"
               />
               <Tooltip contentStyle={tooltipStyle} />
-              <Bar dataKey="damage" fill={CHART_COLORS.damage} radius={[4, 4, 0, 0]} name="Damage" />
+              <Bar dataKey="damage" fill={CHART_COLORS.damage} radius={[4, 4, 0, 0]} name="Obrażenia" />
             </BarChart>
           </ResponsiveContainer>
         </div>
