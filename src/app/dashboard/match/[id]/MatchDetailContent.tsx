@@ -147,21 +147,7 @@ export default function MatchDetailContent({ match }: { match: Match }) {
       {/* ─── Weapons Side-by-Side ─── */}
       <div className={styles.weaponsSection}>
         <h3>🔫 Statystyki broni</h3>
-        <div className={styles.weaponsGrid}>
-          <div className={styles.weaponTable}>
-            <div className={styles.weaponTableHeader}>
-              <span>{p1?.player_nick}</span>
-            </div>
-            <WeaponTable weapons={p1?.weapon_stats || []} />
-          </div>
-
-          <div className={styles.weaponTable}>
-            <div className={styles.weaponTableHeader}>
-              <span>{p2?.player_nick}</span>
-            </div>
-            <WeaponTable weapons={p2?.weapon_stats || []} />
-          </div>
-        </div>
+        <CombinedWeaponTable p1Weapons={p1?.weapon_stats || []} p2Weapons={p2?.weapon_stats || []} />
       </div>
     </div>
   );
@@ -215,27 +201,70 @@ function ComparisonRow({
   );
 }
 
-function WeaponTable({ weapons }: { weapons: WeaponStat[] }) {
-  const sorted = [...weapons].sort((a, b) => a.weapon_index - b.weapon_index);
+const WEAPON_ICONS: Record<string, string> = {
+  "Gauntlet": "/img/gauntlet.png",
+  "Machine Gun": "/img/machine_gun.png",
+  "Super Machine Gun": "/img/super_machine_gun.png",
+  "Shotgun": "/img/shotgun.png",
+  "Super Shotgun": "/img/super_shotgun.png",
+  "Nail Gun": "/img/nailgun.png",
+  "Super Nailgun": "/img/super_nailgun.png",
+  "Rocket Launcher": "/img/rocket_launcher.png",
+  "Lightning Gun": "/img/lightinggun.png",
+  "Railgun": "/img/railgun.png",
+  "Tribolt": "/img/tribolt.png",
+};
+
+function CombinedWeaponTable({ p1Weapons, p2Weapons }: { p1Weapons: WeaponStat[]; p2Weapons: WeaponStat[] }) {
+  const sortedP1 = [...p1Weapons].sort((a, b) => a.weapon_index - b.weapon_index);
+  const sortedP2 = [...p2Weapons].sort((a, b) => a.weapon_index - b.weapon_index);
+  
+  const length = Math.max(sortedP1.length, sortedP2.length);
 
   return (
-    <div className={styles.wTable}>
-      <div className={styles.wRow + " " + styles.wHeader}>
-        <span>Broń</span>
-        <span>H/S</span>
-        <span>Acc</span>
-        <span>Dmg</span>
-        <span>K</span>
+    <div className={styles.cwTable}>
+      <div className={`${styles.cwRow} ${styles.cwHeader}`}>
+        <span className={styles.cwStatLeft}>H/S</span>
+        <span className={styles.cwStatLeft}>Acc</span>
+        <span className={styles.cwStatLeft}>Dmg</span>
+        <span className={styles.cwStatLeft}>K</span>
+        <span className={styles.cwIconCenter}>Broń</span>
+        <span className={styles.cwStatRight}>K</span>
+        <span className={styles.cwStatRight}>Dmg</span>
+        <span className={styles.cwStatRight}>Acc</span>
+        <span className={styles.cwStatRight}>H/S</span>
       </div>
-      {sorted.map((w) => (
-        <div key={w.weapon_index} className={styles.wRow}>
-          <span className={styles.wName}>{w.weapon_name}</span>
-          <span className={styles.wStat}>{w.hits_shots || "—"}</span>
-          <span className={styles.wStat}>{w.accuracy_pct > 0 ? `${w.accuracy_pct}%` : "—"}</span>
-          <span className={styles.wStat}>{w.damage || "—"}</span>
-          <span className={styles.wStat}>{w.kills || "—"}</span>
-        </div>
-      ))}
+      {Array.from({ length }).map((_, i) => {
+        const w1 = sortedP1[i];
+        const w2 = sortedP2[i];
+        if (!w1 && !w2) return null;
+        
+        const weaponName = w1?.weapon_name || w2?.weapon_name;
+        // Weapon names might have slightly differed mappings, ensure we fallback properly
+        const iconSrc = weaponName ? WEAPON_ICONS[weaponName] : "";
+
+        return (
+          <div key={i} className={styles.cwRow}>
+            <span className={styles.cwStatLeft}>{w1?.hits_shots || "—"}</span>
+            <span className={styles.cwStatLeft}>{w1?.accuracy_pct > 0 ? `${w1.accuracy_pct}%` : "—"}</span>
+            <span className={styles.cwStatLeft}>{w1?.damage || "—"}</span>
+            <span className={styles.cwStatLeft}>{w1?.kills || "—"}</span>
+            
+            <div className={styles.cwIconCenter}>
+              {iconSrc ? (
+                <img src={iconSrc} alt={weaponName} title={weaponName} className={styles.cwIconImg} />
+              ) : (
+                <span className={styles.cwIconFallback}>{weaponName}</span>
+              )}
+            </div>
+            
+            <span className={styles.cwStatRight}>{w2?.kills || "—"}</span>
+            <span className={styles.cwStatRight}>{w2?.damage || "—"}</span>
+            <span className={styles.cwStatRight}>{w2?.accuracy_pct > 0 ? `${w2.accuracy_pct}%` : "—"}</span>
+            <span className={styles.cwStatRight}>{w2?.hits_shots || "—"}</span>
+          </div>
+        );
+      })}
     </div>
   );
 }

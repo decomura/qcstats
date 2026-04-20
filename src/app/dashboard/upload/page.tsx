@@ -143,7 +143,7 @@ export default function UploadPage() {
       setIsDragging(false);
       const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith("image/"));
       if (files.length > 1) {
-        startBulkMode(files.slice(0, 10));
+        startBulkMode(files.slice(0, 100));
       } else if (files[0]) {
         handleFile(files[0]);
       }
@@ -164,7 +164,7 @@ export default function UploadPage() {
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const files = Array.from(e.target.files || []).filter(f => f.type.startsWith("image/"));
       if (files.length > 1) {
-        startBulkMode(files.slice(0, 10));
+        startBulkMode(files.slice(0, 100));
       } else if (files[0]) {
         handleFile(files[0]);
       }
@@ -197,12 +197,31 @@ export default function UploadPage() {
       updated[i] = { ...updated[i], status: "processing" };
       setBulkItems([...updated]);
 
-      try {
-        const canvas = await loadImageToCanvas(updated[i].file);
-        const ocrResult = await processScreenshot(canvas, undefined, "total_score", updated[i].file);
-        updated[i] = { ...updated[i], status: "done", result: ocrResult };
-      } catch (err) {
-        updated[i] = { ...updated[i], status: "error", error: err instanceof Error ? err.message : "OCR failed" };
+      let success = false;
+      let retries = 0;
+      
+      while (!success && retries < 3) {
+        try {
+          const canvas = await loadImageToCanvas(updated[i].file);
+          const ocrResult = await processScreenshot(canvas, undefined, "total_score", updated[i].file);
+          updated[i] = { ...updated[i], status: "done", result: ocrResult };
+          success = true;
+        } catch (err) {
+          const errorMessage = err instanceof Error ? err.message : "OCR failed";
+          if (errorMessage.includes("limit API") || errorMessage.includes("kolejk") || errorMessage.includes("429")) {
+            retries++;
+            if (retries >= 3) {
+              updated[i] = { ...updated[i], status: "error", error: "Przekroczono limit API (brak prób)." };
+              break;
+            }
+            updated[i] = { ...updated[i], status: "processing", error: `Kolejkowanie (60s)... Próba ${retries + 1}/3` };
+            setBulkItems([...updated]);
+            await new Promise(resolve => setTimeout(resolve, 60000));
+          } else {
+            updated[i] = { ...updated[i], status: "error", error: errorMessage };
+            break;
+          }
+        }
       }
       setBulkItems([...updated]);
     }
@@ -704,7 +723,7 @@ export default function UploadPage() {
                   <span className={styles.bulkItemName}>{item.file.name}</span>
                   <span className={styles.bulkItemStatus}>
                     {item.status === "pending" && "⏳ Oczekuje..."}
-                    {item.status === "processing" && "🔄 Przetwarzanie..."}
+                    {item.status === "processing" && (item.error ? `🔄 ${item.error}` : "🔄 Przetwarzanie...")}
                     {item.status === "done" && `✅ ${item.result?.player1.nick} vs ${item.result?.player2.nick}`}
                     {item.status === "error" && `❌ ${item.error}`}
                   </span>
