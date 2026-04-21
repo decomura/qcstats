@@ -19,9 +19,11 @@ type Stage = "idle" | "preview" | "processing" | "results" | "saving" | "saved" 
 interface BulkItem {
   file: File;
   imageUrl: string;
-  status: "pending" | "processing" | "done" | "error";
+  status: "pending" | "processing" | "done" | "error" | "queued";
   result?: OCRResult;
   error?: string;
+  retryCount?: number;
+  queuedUntil?: number; // timestamp when retry will happen
 }
 
 export default function UploadPage() {
@@ -193,31 +195,76 @@ export default function UploadPage() {
 
     const updated = [...items];
 
+    // Helper: is the error a rate-limit / transient error that should be retried?
+    const isRateLimitError = (msg: string, status?: number) =>
+      status === 429 ||
+      status === 502 ||
+      msg.includes("limit API") ||
+      msg.includes("kolejk") ||
+      msg.includes("429") ||
+      msg.includes("502") ||
+      msg.includes("rate") ||
+      msg.includes("Too many") ||
+      msg.includes("Zbyt wiele") ||
+      msg.includes("Odczekaj") ||
+      msg.includes("Spróbuj ponownie");
+
+    // Helper: calculate wait time with progressive backoff
+    const getWaitTime = (retryCount: number): number => {
+      // 30s, 45s, 60s, 90s, 120s (max)
+      const waitTimes = [30_000, 45_000, 60_000, 90_000, 120_000];
+      return waitTimes[Math.min(retryCount, waitTimes.length - 1)];
+    };
+
     for (let i = 0; i < updated.length; i++) {
-      updated[i] = { ...updated[i], status: "processing" };
+      updated[i] = { ...updated[i], status: "processing", retryCount: 0 };
       setBulkItems([...updated]);
 
       let success = false;
       let retries = 0;
       
-      while (!success && retries < 3) {
+      // Infinite retry loop for rate-limited requests
+      while (!success) {
         try {
           const canvas = await loadImageToCanvas(updated[i].file);
           const ocrResult = await processScreenshot(canvas, undefined, "total_score", updated[i].file);
-          updated[i] = { ...updated[i], status: "done", result: ocrResult };
+          updated[i] = { ...updated[i], status: "done", result: ocrResult, error: undefined };
           success = true;
         } catch (err) {
           const errorMessage = err instanceof Error ? err.message : "OCR failed";
-          if (errorMessage.includes("limit API") || errorMessage.includes("kolejk") || errorMessage.includes("429")) {
+          
+          if (isRateLimitError(errorMessage)) {
             retries++;
-            if (retries >= 3) {
-              updated[i] = { ...updated[i], status: "error", error: "Przekroczono limit API (brak prób)." };
-              break;
-            }
-            updated[i] = { ...updated[i], status: "processing", error: `Kolejkowanie (60s)... Próba ${retries + 1}/3` };
+            const waitMs = getWaitTime(retries - 1);
+            const queuedUntil = Date.now() + waitMs;
+            
+            updated[i] = {
+              ...updated[i],
+              status: "queued",
+              retryCount: retries,
+              queuedUntil,
+              error: `⏳ Kolejka — ponowienie za ${Math.ceil(waitMs / 1000)}s (próba ${retries})`,
+            };
             setBulkItems([...updated]);
-            await new Promise(resolve => setTimeout(resolve, 60000));
+            
+            // Countdown timer — update UI every second
+            const countdownInterval = setInterval(() => {
+              const remaining = Math.max(0, Math.ceil((queuedUntil - Date.now()) / 1000));
+              updated[i] = {
+                ...updated[i],
+                error: `⏳ Kolejka — ponowienie za ${remaining}s (próba ${retries})`,
+              };
+              setBulkItems([...updated]);
+            }, 1000);
+            
+            await new Promise(resolve => setTimeout(resolve, waitMs));
+            clearInterval(countdownInterval);
+            
+            // Set back to processing before retry
+            updated[i] = { ...updated[i], status: "processing", error: `🔄 Ponawiam (próba ${retries + 1})...` };
+            setBulkItems([...updated]);
           } else {
+            // Non-retryable error — fail this item
             updated[i] = { ...updated[i], status: "error", error: errorMessage };
             break;
           }
@@ -233,6 +280,7 @@ export default function UploadPage() {
 
     setStage("bulk-results");
   }, []);
+
 
   const handleBulkSave = useCallback(async () => {
     setIsSaving(true);
@@ -713,17 +761,41 @@ export default function UploadPage() {
         <div className={styles.previewSection}>
           <h2 style={{ fontFamily: "var(--font-display)", color: "var(--text-primary)" }}>
             📦 Bulk Upload — {bulkItems.filter(i => i.status === "done").length}/{bulkItems.length}
+            {bulkItems.some(i => i.status === "queued") && (
+              <span style={{ fontSize: "0.7em", color: "var(--accent-orange, #ff9800)", marginLeft: "12px" }}>
+                ⏳ {bulkItems.filter(i => i.status === "queued").length} w kolejce
+              </span>
+            )}
           </h2>
+          {bulkItems.some(i => i.status === "queued") && (
+            <div style={{
+              padding: "10px 16px",
+              background: "rgba(255, 152, 0, 0.1)",
+              border: "1px solid rgba(255, 152, 0, 0.3)",
+              borderRadius: "8px",
+              color: "#ff9800",
+              fontSize: "0.85rem",
+              marginBottom: "12px",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+            }}>
+              🔄 Rate limit aktywny — system automatycznie ponowi próby. Nie zamykaj tej strony!
+            </div>
+          )}
           <p className={styles.funnyMessage} key={funnyMessage}>{funnyMessage}</p>
           <div className={styles.bulkList}>
             {bulkItems.map((item, i) => (
-              <div key={i} className={`${styles.bulkItem} ${styles[`bulk-${item.status}`]}`}>
+              <div key={i} className={`${styles.bulkItem} ${styles[`bulk-${item.status}`] || ""}`}>
                 <img src={item.imageUrl} alt="" className={styles.bulkThumb} />
                 <div className={styles.bulkItemInfo}>
                   <span className={styles.bulkItemName}>{item.file.name}</span>
                   <span className={styles.bulkItemStatus}>
                     {item.status === "pending" && "⏳ Oczekuje..."}
                     {item.status === "processing" && (item.error ? `🔄 ${item.error}` : "🔄 Przetwarzanie...")}
+                    {item.status === "queued" && (
+                      <span style={{ color: "#ff9800" }}>{item.error || "⏳ W kolejce..."}</span>
+                    )}
                     {item.status === "done" && `✅ ${item.result?.player1.nick} vs ${item.result?.player2.nick}`}
                     {item.status === "error" && `❌ ${item.error}`}
                   </span>

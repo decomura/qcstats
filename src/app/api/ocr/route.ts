@@ -231,7 +231,7 @@ export async function POST(request: NextRequest) {
     });
 
     let geminiResponse: Response | null = null;
-    const MAX_RETRIES = 3;
+    const MAX_RETRIES = 5;
 
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
       geminiResponse = await fetch(GEMINI_URL, {
@@ -240,10 +240,11 @@ export async function POST(request: NextRequest) {
         body: requestBody,
       });
 
-      if (geminiResponse.status === 429 && attempt < MAX_RETRIES) {
-        // Wait with exponential backoff: 2s, 4s, 8s
-        const waitMs = Math.pow(2, attempt + 1) * 1000;
-        console.log(`[OCR API] Rate limited, retrying in ${waitMs}ms (attempt ${attempt + 1}/${MAX_RETRIES})`);
+      // Retry on both 429 (rate limit) and 502 (transient server error)
+      if ((geminiResponse.status === 429 || geminiResponse.status === 502) && attempt < MAX_RETRIES) {
+        // Wait with exponential backoff: 3s, 6s, 12s, 24s, 48s
+        const waitMs = Math.pow(2, attempt) * 3000;
+        console.log(`[OCR API] ${geminiResponse.status} error, retrying in ${waitMs}ms (attempt ${attempt + 1}/${MAX_RETRIES})`);
         await new Promise((r) => setTimeout(r, waitMs));
         continue;
       }
@@ -257,8 +258,21 @@ export async function POST(request: NextRequest) {
 
       if (status === 429) {
         return NextResponse.json(
-          { error: "Osiągnięto limit API. Spróbuj ponownie za minutę." },
-          { status: 429 }
+          { error: "Osiągnięto limit API. System automatycznie ponowi próbę.", retryAfter: 30 },
+          { 
+            status: 429,
+            headers: { "Retry-After": "30" },
+          }
+        );
+      }
+
+      if (status === 502) {
+        return NextResponse.json(
+          { error: "Serwer API tymczasowo niedostępny. System automatycznie ponowi próbę.", retryAfter: 30 },
+          {
+            status: 502,
+            headers: { "Retry-After": "30" },
+          }
         );
       }
 

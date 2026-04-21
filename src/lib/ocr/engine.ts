@@ -258,9 +258,10 @@ export async function processScreenshot(
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
 
-    if (response.status === 429) {
+    if (response.status === 429 || response.status === 502) {
+      const retryAfter = errorData.retryAfter || 30;
       throw new Error(
-        "Osiągnięto limit API. Spróbuj ponownie za minutę lub dodaj screenshot do kolejki."
+        `Osiągnięto limit API (${response.status}). Automatyczne ponowienie za ${retryAfter}s.`
       );
     }
 
