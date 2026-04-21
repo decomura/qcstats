@@ -45,6 +45,9 @@ export default function LandingPage() {
             <a href="/wall" className="btn btn-secondary btn-lg" id="cta-community-wall">
               🏟️ Community Wall
             </a>
+            <a href="/guide" className="btn btn-secondary btn-lg" id="cta-guide">
+              📖 Guide
+            </a>
             <a href="#jak-to-dziala" className="btn btn-secondary btn-lg" id="cta-how-works">
               Jak to działa?
             </a>

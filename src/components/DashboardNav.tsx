@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useRouter, usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import type { User } from "@supabase/supabase-js";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, ALL_LOCALES, LOCALE_LABELS } from "@/lib/i18n";
 import PlayerSearch from "./PlayerSearch";
 import styles from "./DashboardNav.module.css";
 
@@ -20,6 +20,7 @@ export default function DashboardNav({ user }: Props) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [bellOpen, setBellOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [langOpen, setLangOpen] = useState(false);
   const [notifications, setNotifications] = useState<{ id: string; message: string; type: string; is_read: boolean; created_at: string }[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const { locale, setLocale, t } = useI18n();
@@ -81,7 +82,7 @@ export default function DashboardNav({ user }: Props) {
               onClick={() => { setMoreOpen(!moreOpen); setMenuOpen(false); setBellOpen(false); }}
               type="button"
             >
-              ⚙️ Więcej ▾
+              ⚙️ {t("nav.more")} ▾
             </button>
             {moreOpen && (
               <div className={styles.dropdown} style={{ left: 0, right: 'auto', minWidth: '180px' }}>
@@ -93,6 +94,9 @@ export default function DashboardNav({ user }: Props) {
                 </a>
                 <a href="/dashboard/friends" className={styles.dropdownItem} onClick={() => setMoreOpen(false)}>
                   👥 {t("friends.title")}
+                </a>
+                <a href="/guide" className={styles.dropdownItem} onClick={() => setMoreOpen(false)}>
+                  📖 {t("nav.guide")}
                 </a>
               </div>
             )}
@@ -168,13 +172,30 @@ export default function DashboardNav({ user }: Props) {
 
           {menuOpen && (
             <div className={styles.dropdown}>
-              <button
-                onClick={() => setLocale(locale === "en" ? "pl" : "en")}
-                className={styles.dropdownItem}
-                type="button"
-              >
-                🌐 {locale === "en" ? "Polski" : "English"}
-              </button>
+              <div style={{ position: 'relative' }}>
+                <button
+                  onClick={() => setLangOpen(!langOpen)}
+                  className={styles.dropdownItem}
+                  type="button"
+                >
+                  🌐 {LOCALE_LABELS[locale]} ▾
+                </button>
+                {langOpen && (
+                  <div className={styles.dropdown} style={{ position: 'absolute', top: '100%', left: 0, right: 0, minWidth: '140px', zIndex: 100 }}>
+                    {ALL_LOCALES.map((loc) => (
+                      <button
+                        key={loc}
+                        onClick={() => { setLocale(loc); setLangOpen(false); }}
+                        className={styles.dropdownItem}
+                        type="button"
+                        style={{ fontWeight: locale === loc ? 700 : 400, color: locale === loc ? 'var(--accent-orange)' : undefined }}
+                      >
+                        {LOCALE_LABELS[loc]}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               <a href="/dashboard/settings" className={styles.dropdownItem}>
                 ⚙️ {t("nav.settings")}
               </a>
@@ -210,8 +231,15 @@ export default function DashboardNav({ user }: Props) {
           <a href="/dashboard/compare" className={styles.mobileLink} onClick={() => setMobileOpen(false)}>⚔️ {t("nav.compare")}</a>
           <a href="/dashboard/friends" className={styles.mobileLink} onClick={() => setMobileOpen(false)}>👥 {t("friends.title")}</a>
           <a href="/wall" className={styles.mobileLink} onClick={() => setMobileOpen(false)}>🏟️ Wall</a>
+          <a href="/guide" className={styles.mobileLink} onClick={() => setMobileOpen(false)}>📖 {t("nav.guide")}</a>
           <a href="/dashboard/settings" className={styles.mobileLink} onClick={() => setMobileOpen(false)}>⚙️ {t("nav.settings")}</a>
-          <button onClick={() => { setLocale(locale === "en" ? "pl" : "en"); setMobileOpen(false); }} className={styles.mobileLink} type="button">🌐 {locale === "en" ? "Polski" : "English"}</button>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', padding: '8px 16px' }}>
+            {ALL_LOCALES.map((loc) => (
+              <button key={loc} onClick={() => { setLocale(loc); setMobileOpen(false); }} className={styles.mobileLink} type="button" style={{ padding: '4px 10px', fontSize: '0.8rem', fontWeight: locale === loc ? 700 : 400, color: locale === loc ? 'var(--accent-orange)' : undefined }}>
+                {LOCALE_LABELS[loc]}
+              </button>
+            ))}
+          </div>
           <button onClick={handleLogout} className={styles.mobileLink} type="button">🚪 {t("nav.logout")}</button>
         </div>
       )}
