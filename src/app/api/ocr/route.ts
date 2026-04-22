@@ -126,16 +126,24 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    const reqId = Date.now().toString(36);
+    const reqStartTime = Date.now();
+    console.log(`[OCR API][${reqId}] 📥 Nowe żądanie OCR`);
+
     // Auth check — only authenticated users can use OCR
     const { createClient } = await import("@/lib/supabase/server");
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
+      console.warn(`[OCR API][${reqId}] 🚫 Unauthorized — brak sesji`);
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    console.log(`[OCR API][${reqId}] 👤 User: ${user.id.slice(0, 8)}...`);
 
     // Rate limit check (10 req/min/user)
     if (!checkRateLimit(user.id)) {
+      const timestamps = rateLimitMap.get(user.id) || [];
+      console.warn(`[OCR API][${reqId}] ⚠️ Rate limit! User ${user.id.slice(0, 8)}... has ${timestamps.length} req in window`);
       return NextResponse.json(
         { error: "Zbyt wiele żądań. Odczekaj chwilę (max 10/min).", remaining: 0 },
         { status: 429 }
@@ -159,7 +167,9 @@ export async function POST(request: NextRequest) {
       .gte("created_at", today + "T00:00:00Z");
     
     const usedToday = count ?? 0;
+    console.log(`[OCR API][${reqId}] 📊 Daily usage: ${usedToday}/${DAILY_LIMIT} (role: ${profile?.role || 'user'})`);
     if (usedToday >= DAILY_LIMIT) {
+      console.warn(`[OCR API][${reqId}] 🚫 Daily limit reached: ${usedToday}/${DAILY_LIMIT}`);
       return NextResponse.json(
         { 
           error: `Osiągnięto dzienny limit ${DAILY_LIMIT} screenshotów. Spróbuj jutro.`,
@@ -207,6 +217,8 @@ export async function POST(request: NextRequest) {
     }
 
     const [, mimeType, , base64Data] = match;
+    const payloadSizeKB = (base64Data.length * 3 / 4 / 1024).toFixed(1);
+    console.log(`[OCR API][${reqId}] 📦 Payload: ${mimeType}, ~${payloadSizeKB}KB (base64: ${(image.length / 1024).toFixed(1)}KB)`);
 
     // Call Gemini API with retry for rate limits
     const requestBody = JSON.stringify({
@@ -232,19 +244,24 @@ export async function POST(request: NextRequest) {
 
     let geminiResponse: Response | null = null;
     const MAX_RETRIES = 5;
+    console.log(`[OCR API][${reqId}] 🤖 Wysyłam do Gemini (model: ${GEMINI_MODEL}, max retry: ${MAX_RETRIES})`);
 
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      const geminiStart = Date.now();
       geminiResponse = await fetch(GEMINI_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: requestBody,
       });
+      const geminiMs = Date.now() - geminiStart;
+
+      console.log(`[OCR API][${reqId}] 🤖 Gemini odpowiedź: ${geminiResponse.status} w ${geminiMs}ms (attempt ${attempt + 1}/${MAX_RETRIES + 1})`);
 
       // Retry on both 429 (rate limit) and 502 (transient server error)
       if ((geminiResponse.status === 429 || geminiResponse.status === 502) && attempt < MAX_RETRIES) {
         // Wait with exponential backoff: 3s, 6s, 12s, 24s, 48s
         const waitMs = Math.pow(2, attempt) * 3000;
-        console.log(`[OCR API] ${geminiResponse.status} error, retrying in ${waitMs}ms (attempt ${attempt + 1}/${MAX_RETRIES})`);
+        console.warn(`[OCR API][${reqId}] ⏳ Gemini ${geminiResponse.status}, retry za ${waitMs}ms (attempt ${attempt + 1}/${MAX_RETRIES})`);
         await new Promise((r) => setTimeout(r, waitMs));
         continue;
       }
@@ -276,7 +293,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      console.error(`[OCR API] Gemini error (${status}):`, errorData);
+      console.error(`[OCR API][${reqId}] ❌ Gemini error (${status}):`, errorData);
       return NextResponse.json(
         { error: `Wystąpił błąd przetwarzania obrazu. Spróbuj ponownie.` },
         { status: 502 }
@@ -285,6 +302,7 @@ export async function POST(request: NextRequest) {
 
     const geminiData = await geminiResponse.json();
     const rawText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    console.log(`[OCR API][${reqId}] 📄 Gemini response length: ${rawText.length} chars`);
 
     // Parse the JSON from Gemini's response
     // Strip markdown code blocks if present
@@ -327,6 +345,7 @@ export async function POST(request: NextRequest) {
     if (parsed.isDuel === false) {
       const detectedMode = parsed.gameMode || "unknown";
       const reason = parsed.reason || "";
+      console.warn(`[OCR API][${reqId}] ⚠️ Nie-duel screenshot: mode=${detectedMode}, reason=${reason}`);
       return NextResponse.json({
         success: false,
         error: `Ten screenshot nie jest z trybu DUEL (wykryto: ${detectedMode}). ${reason}. QCStats obsługuje wyłącznie tryb Duel 1v1.`,
@@ -334,10 +353,17 @@ export async function POST(request: NextRequest) {
       }, { status: 422 });
     }
 
+    const totalMs = Date.now() - reqStartTime;
+    const p1 = parsed.player1?.nick || '?';
+    const p2 = parsed.player2?.nick || '?';
+    const s1 = parsed.player1?.score ?? '?';
+    const s2 = parsed.player2?.score ?? '?';
+    console.log(`[OCR API][${reqId}] ✅ Sukces w ${totalMs}ms | ${p1} ${s1}:${s2} ${p2} | Map: ${parsed.mapName || 'N/A'}`);
+
     return NextResponse.json({ success: true, data: parsed });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
-    console.error("[OCR API] Error:", message);
+    console.error(`[OCR API] ❌ Fatal error:`, message);
     return NextResponse.json(
       { error: `OCR processing failed: ${message}` },
       { status: 500 }

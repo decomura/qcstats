@@ -234,6 +234,9 @@ export async function processScreenshot(
 
   report("loading", 5, "Przygotowywanie screenshota...");
 
+  const engineStart = performance.now();
+  console.log(`[OCR Engine] 📸 Start przetwarzania${imageFile ? ` (plik: ${imageFile.name}, ${(imageFile.size / 1024).toFixed(1)}KB)` : ' (canvas)'}`);
+
   // Get base64 from canvas or file
   let dataUrl: string;
   if (imageFile) {
@@ -242,29 +245,41 @@ export async function processScreenshot(
     dataUrl = _canvas.toDataURL("image/png");
   }
 
+  const originalSize = (dataUrl.length / 1024).toFixed(1);
+
   // Compress to reduce payload size (prevents 413 errors)
   report("loading", 10, "Kompresja obrazu...");
   dataUrl = await compressImage(dataUrl);
 
+  const compressedSize = (dataUrl.length / 1024).toFixed(1);
+  const compressionRatio = ((1 - dataUrl.length / (parseFloat(originalSize) * 1024)) * 100).toFixed(0);
+  console.log(`[OCR Engine] 📦 Kompresja: ${originalSize}KB → ${compressedSize}KB (${compressionRatio}% mniejszy)`);
+
   report("ocr", 20, "Wysyłanie do Gemini Vision AI...");
 
   // Call our API route
+  const fetchStart = performance.now();
+  console.log(`[OCR Engine] 🌐 Wysyłam do /api/ocr...`);
   const response = await fetch("/api/ocr", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ image: dataUrl }),
   });
+  const fetchMs = (performance.now() - fetchStart).toFixed(0);
+  console.log(`[OCR Engine] 🌐 Odpowiedź: ${response.status} w ${fetchMs}ms`);
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
 
     if (response.status === 429 || response.status === 502) {
       const retryAfter = errorData.retryAfter || 30;
+      console.warn(`[OCR Engine] ⚠️ Rate limit/błąd ${response.status} | retryAfter: ${retryAfter}s | msg: ${errorData.error}`);
       throw new Error(
         `Osiągnięto limit API (${response.status}). Automatyczne ponowienie za ${retryAfter}s.`
       );
     }
 
+    console.error(`[OCR Engine] ❌ Błąd ${response.status}: ${errorData.error}`);
     throw new Error(errorData.error || `OCR failed (${response.status})`);
   }
 
@@ -273,6 +288,7 @@ export async function processScreenshot(
   const result = await response.json();
 
   if (!result.success || !result.data) {
+    console.error(`[OCR Engine] ❌ API zwróciło błąd:`, result.error);
     throw new Error(result.error || "Gemini nie zwróciło danych");
   }
 
@@ -338,6 +354,12 @@ export async function processScreenshot(
 
   // Validation
   const confidence = calculateConfidence(player1, player2, warnings);
+
+  const totalMs = (performance.now() - engineStart).toFixed(0);
+  console.log(`[OCR Engine] ✅ Gotowe w ${totalMs}ms | ${player1.nick} ${player1.score}:${player2.score} ${player2.nick} | Map: ${data.mapName || 'N/A'} | Confidence: ${confidence}% | Warnings: ${warnings.length}`);
+  if (warnings.length > 0) {
+    console.log(`[OCR Engine] ⚠️ Warnings:`, warnings);
+  }
 
   report("done", 100, "OCR zakończony! ✨");
 

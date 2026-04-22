@@ -187,6 +187,11 @@ export default function UploadPage() {
   }, []);
 
   const processBulk = useCallback(async (items: BulkItem[]) => {
+    const batchId = Date.now().toString(36);
+    console.log(`[BulkQueue][${batchId}] 🚀 Rozpoczynam batch upload: ${items.length} screenshotów`);
+    console.log(`[BulkQueue][${batchId}] Pliki:`, items.map(i => i.file.name));
+    const batchStartTime = performance.now();
+
     const locale = (typeof window !== "undefined" && localStorage.getItem("qcstats_locale") === "en") ? "en" : "pl";
     setFunnyMessage(getRandomLoadingMessage(locale as "pl" | "en"));
     funnyIntervalRef.current = setInterval(() => {
@@ -217,6 +222,8 @@ export default function UploadPage() {
     };
 
     for (let i = 0; i < updated.length; i++) {
+      const itemStartTime = performance.now();
+      console.log(`[BulkQueue][${batchId}] 📸 [${i + 1}/${updated.length}] Przetwarzanie: ${updated[i].file.name} (${(updated[i].file.size / 1024).toFixed(1)}KB)`);
       updated[i] = { ...updated[i], status: "processing", retryCount: 0 };
       setBulkItems([...updated]);
 
@@ -226,8 +233,12 @@ export default function UploadPage() {
       // Infinite retry loop for rate-limited requests
       while (!success) {
         try {
+          const attemptStart = performance.now();
+          console.log(`[BulkQueue][${batchId}] 🔄 [${i + 1}/${updated.length}] Próba ${retries + 1} — wysyłanie do OCR...`);
           const canvas = await loadImageToCanvas(updated[i].file);
           const ocrResult = await processScreenshot(canvas, undefined, "total_score", updated[i].file);
+          const attemptMs = (performance.now() - attemptStart).toFixed(0);
+          console.log(`[BulkQueue][${batchId}] ✅ [${i + 1}/${updated.length}] Sukces w ${attemptMs}ms | ${ocrResult.player1.nick} vs ${ocrResult.player2.nick} | Score: ${ocrResult.player1.score}:${ocrResult.player2.score} | Confidence: ${ocrResult.confidence}%`);
           updated[i] = { ...updated[i], status: "done", result: ocrResult, error: undefined };
           success = true;
         } catch (err) {
@@ -237,6 +248,8 @@ export default function UploadPage() {
             retries++;
             const waitMs = getWaitTime(retries - 1);
             const queuedUntil = Date.now() + waitMs;
+            
+            console.warn(`[BulkQueue][${batchId}] ⏳ [${i + 1}/${updated.length}] Rate limit! Retry #${retries} | Czekam ${Math.ceil(waitMs / 1000)}s | Błąd: ${errorMessage}`);
             
             updated[i] = {
               ...updated[i],
@@ -260,16 +273,20 @@ export default function UploadPage() {
             await new Promise(resolve => setTimeout(resolve, waitMs));
             clearInterval(countdownInterval);
             
+            console.log(`[BulkQueue][${batchId}] 🔄 [${i + 1}/${updated.length}] Czas oczekiwania minął, ponawiam próbę ${retries + 1}...`);
             // Set back to processing before retry
             updated[i] = { ...updated[i], status: "processing", error: `🔄 Ponawiam (próba ${retries + 1})...` };
             setBulkItems([...updated]);
           } else {
             // Non-retryable error — fail this item
+            console.error(`[BulkQueue][${batchId}] ❌ [${i + 1}/${updated.length}] Błąd nie do ponowienia: ${errorMessage}`);
             updated[i] = { ...updated[i], status: "error", error: errorMessage };
             break;
           }
         }
       }
+      const itemMs = (performance.now() - itemStartTime).toFixed(0);
+      console.log(`[BulkQueue][${batchId}] 📊 [${i + 1}/${updated.length}] Zakończono w ${itemMs}ms (retry: ${retries}, status: ${updated[i].status})`);
       setBulkItems([...updated]);
     }
 
@@ -277,6 +294,12 @@ export default function UploadPage() {
       clearInterval(funnyIntervalRef.current);
       funnyIntervalRef.current = null;
     }
+
+    const totalMs = ((performance.now() - batchStartTime) / 1000).toFixed(1);
+    const doneCount = updated.filter(i => i.status === "done").length;
+    const errorCount = updated.filter(i => i.status === "error").length;
+    const totalRetries = updated.reduce((sum, i) => sum + (i.retryCount || 0), 0);
+    console.log(`[BulkQueue][${batchId}] 🏁 Batch zakończony w ${totalMs}s | ✅ ${doneCount} sukces | ❌ ${errorCount} błąd | 🔄 ${totalRetries} łącznych retry`);
 
     setStage("bulk-results");
   }, []);
